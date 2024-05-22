@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PIGGISWS", "PIGGISWS\PIGGISWS.csproj", "{D036817F-C4ED-4070-979C-39190B8E3A7A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D036817F-C4ED-4070-979C-39190B8E3A7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D036817F-C4ED-4070-979C-39190B8E3A7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D036817F-C4ED-4070-979C-39190B8E3A7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D036817F-C4ED-4070-979C-39190B8E3A7A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1DCBDDFE-4BB9-4769-8264-B7AB280D57E6}
+	EndGlobalSection
+EndGlobal
