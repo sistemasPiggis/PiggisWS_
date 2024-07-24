@@ -20,42 +20,25 @@ public class Agente
     [Display(Name = "Código de ID")]
     public string AGE_ID { get; set; } = string.Empty;
 
-    public int AGE_PORC_COMISION { get; set; }
 
     [Display(Name = "Código de Empleado")]
     public int AGE_EMPLEADO { get; set; }
 
     [Display(Name = "Estado de Agente")]
-    public int AGE_INACTIVO { get; set; }
+    public int? AGE_INACTIVO { get; set; }
 
-    public string CREA_USR { get; set; }= string.Empty;
-
-    public DateTime CREA_FECHA {  get; set; }
-
-    public string MOD_USR {  get; set; } = string.Empty;
-    public DateTime MOD_FECHA { get; set; }
-
+    
     [Display(Name = "Bodega de Agente")]
-    public int AGE_BODEGA { get; set; }
+    public int? AGE_BODEGA { get; set; }
 
-    public int AGE_CLIENTE { get; set; }
-
-    public int AGE_CUEGASTO { get; set; }
-    [Display(Name = "Almacen de Agente")]
-    public int AGE_ALMACEN {  get; set; }
-    public int AGE_PVENTA { get; set; }
-
-    public int AGE_ALMACEN1 { get; set; }
-    public int AGE_PVENTA1 { get; set; }
+   
     [Display(Name = "Departamento Agente")]
-    public int AGE_DEPARTAMENTO { get; set; }
-    [Display(Name = "Ubicación de Agente")]
-    public int AGE_UBICACION { get; set; }
+    public int? AGE_DEPARTAMENTO { get; set; }
+   
     [Display(Name = "Código de Agente al que reporta")]
-    public int AGE_REPORTA { get; set; }
+    public int? AGE_REPORTA { get; set; }
     [Display(Name = "Mail de Agente")]
     public string AGE_MAIL { get; set; } = string.Empty;
     [Display(Name = "Teléfono de Agente")]
-    public int AGE_TELEFONO { get; set; }
-    public int AGE_REMPLAZA { get; set; }
+    public int? AGE_TELEFONO { get; set; }
 }

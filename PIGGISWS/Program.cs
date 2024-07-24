@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -6,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using PIGGISWS.Data;
+using PIGGISWS.Interfaces;
+using PIGGISWS.Services;
 using System.Configuration;
 
 
@@ -19,6 +22,10 @@ builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
         .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
             .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
             .AddInMemoryTokenCaches();
+
+//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//  .AddMicrosoftIdentityWebApi(builder.Configuration);
+//builder.Services.AddAuthorization();
 
 
 
@@ -41,6 +48,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseOracle(connectionString));
+
+builder.Services.AddScoped<IAgenteService, AgenteService>();
+builder.Services.AddScoped<IClientesService, ClientesService>();
 
 var app = builder.Build();
 

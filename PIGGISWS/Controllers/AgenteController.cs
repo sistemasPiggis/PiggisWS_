@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Newtonsoft.Json;
 using PIGGISWS.Data;
+using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
+using PIGGISWS.Services;
 
 namespace PIGGISWS.Controllers;
 
@@ -12,54 +15,46 @@ namespace PIGGISWS.Controllers;
 [Route("[controller]")]
 public class AgenteController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IAgenteService _agenteService;
     // GET: Clienteprivate readonly ApplicationDbContext _context;
     ModelResponse model = new ModelResponse();
     Provincia provincia = new Provincia();
 
-    public AgenteController(ApplicationDbContext context)
+    public AgenteController(IAgenteService agenteService)
     {
-        _context = context;
+        _agenteService = agenteService;
     }
     [HttpGet]
     [Authorize]
-    public string getAgente(int age_codigo) /// get menu app ventas piggis
+    public async Task<IActionResult> getAgente(int age_codigo) /// get menu app ventas piggis
     {
 
-        try
+        var response = await _agenteService.GetAgente(age_codigo);
+
+        if (response.Success)
         {
-
-            var query = _context.AGENTE.Where(a => a.AGE_CODIGO == age_codigo)
-                .Select(a => new
-                {
-                    a.AGE_EMPRESA,
-                    a.AGE_CODIGO,
-                    a.AGE_NOMBRE,   
-                    a.AGE_BODEGA, 
-                    a.AGE_ALMACEN,
-                    a.AGE_UBICACION,
-                    a.AGE_REPORTA,
-                    a.AGE_MAIL
-                })
-                .ToList();
-
-            model.Status = Response.StatusCode;
-            model.Mensaje = "Consulta Realizada Correctamente";
-            model.Data = query;
-            string resp = JsonConvert.SerializeObject(model);
-
-            return resp;
+            response.Status = Response.StatusCode;
+            return Ok(response);
         }
-        catch (Exception ex)
-        {
-            model.Status = Response.StatusCode;
-            model.Mensaje = ex.ToString();
-            string respuesta = JsonConvert.SerializeObject(model);
-
-            return respuesta;
-        }
-
+        response.Status = Response.StatusCode;
+        return BadRequest(response);
     }
 
-    
+    [Authorize]
+    [HttpGet("GetCercasAgente")]
+    public async Task<IActionResult> GetCercasAgente(int age_codigo, string age_dia) 
+    {
+
+        var response = await _agenteService.GetCercasAgente(age_codigo, age_dia);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+        response.Status = Response.StatusCode;
+        return BadRequest(response);
+    }
+
+
 }

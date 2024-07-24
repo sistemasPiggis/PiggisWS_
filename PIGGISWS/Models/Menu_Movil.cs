@@ -7,9 +7,10 @@ namespace PIGGISWS.Models;
 public class Menu_Movil
 {
     [Key]
+    [Display(Name = "Menú Codigo")]
     public int? MNV_CODIGO { get; set; }
     public string? MNV_ID { get; set; } = string.Empty;
-
+    [Display(Name = "Menú Nombre")]
     public string? MNV_NOMBRE { get; set; } = string.Empty;
 
 
@@ -26,13 +27,14 @@ public class Menu_Movil
 
 
     public DateTime? MOD_FECHA { get; set; }
+    [Display(Name = "Menú Estado")]
     public int? MNV_INACTIVO { get; set; }
 
     public string? MNV_TIPO_ACTIVIDAD { get; set; } = string.Empty;
     public string? MNV_MODO_APP { get; set; } = string.Empty;
 
     public string? MNV_TIPO_APP { get; set; } = string.Empty;
-
+    [Display(Name = "Menú Imagen")]
     public string? MNV_IMAGEN { get; set; } = string.Empty;  
 
 

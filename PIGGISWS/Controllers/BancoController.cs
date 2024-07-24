@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using PIGGISWS.Data;
 using PIGGISWS.Models;
@@ -23,19 +24,19 @@ public class BancoController : ControllerBase
 
     [HttpGet("getBanco")]
     [Authorize]
-    public string getBanco()
+    public async Task<string> getBanco()
     {
         try
         {
 
-            var query = _context.BANCO_APP.Where(p => (p.BAN_INACTIVO ?? 0) == 0)
+            var query = await _context.BANCO_APP.Where(p => (p.BAN_INACTIVO ?? 0) == 0)
                 .Select(p => new
                 {
                     p.BAN_NOMBRE,
                     p.BAN_CODIGO,
                    
                 }).OrderBy(P => P.BAN_NOMBRE)
-                .ToList();
+                .ToListAsync();
 
             model.Status = Response.StatusCode;
             model.Mensaje = "Consulta Realizada Correctamente";

@@ -22,14 +22,14 @@ public class BodegaController : ControllerBase
     }
     [HttpGet("getUsuarioBodega")]
     [Authorize]
-    public string getUsuarioBodega(string age_codigo)
+    public async Task<string> getUsuarioBodega(string age_codigo)
     {
 
         try
         {
             age_codigo = age_codigo.ToUpper();
             
-            var query = from u in _context.USUARIO
+            var query = await ( from u in _context.USUARIO
                         join us in _context.USRBOD on u.USR_CODIGO equals us.UBO_USUARIO
                         join b in _context.BODEGA on us.UBO_BODEGA equals b.BOD_CODIGO
                         where u.USR_ID == age_codigo
@@ -41,7 +41,7 @@ public class BodegaController : ControllerBase
                           us.UBO_USUARIO,
                           b.BOD_NOMBRE,
                           us.UBO_DEFAULT
-                        };
+                        }).ToListAsync();
 
             model.Status = Response.StatusCode;
             model.Mensaje = "Consulta Realizada Correctamente";
