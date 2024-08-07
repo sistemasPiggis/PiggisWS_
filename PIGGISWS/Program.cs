@@ -16,16 +16,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ?? builder.Configuration["MicrosoftGraph:Scopes"]?.Split(' ');
 
-// Add services to the container.
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
-        .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
-            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
-            .AddInMemoryTokenCaches();
+////// Add services to the container.
+//builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+//    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
+//        .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
+//            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
+//            .AddInMemoryTokenCaches();
 
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//  .AddMicrosoftIdentityWebApi(builder.Configuration);
-//builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+  .AddMicrosoftIdentityWebApi(builder.Configuration);
+builder.Services.AddAuthorization();
 
 
 
@@ -51,6 +51,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IAgenteService, AgenteService>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
+builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IPedidoService, PedidoService>();
 
 var app = builder.Build();
 

@@ -20,19 +20,21 @@ public class BodegaController : ControllerBase
     {
         _context = context;
     }
-    [HttpGet("getUsuarioBodega")]
     [Authorize]
-    public async Task<string> getUsuarioBodega(string age_codigo)
+    [HttpGet("GetUsuarioBodega/{agente}")]
+  
+    public async Task<string> GetUsuarioBodega(int agente)
     {
 
         try
         {
-            age_codigo = age_codigo.ToUpper();
+   
             
             var query = await ( from u in _context.USUARIO
                         join us in _context.USRBOD on u.USR_CODIGO equals us.UBO_USUARIO
                         join b in _context.BODEGA on us.UBO_BODEGA equals b.BOD_CODIGO
-                        where u.USR_ID == age_codigo
+                        join a in _context.AGENTE  on u.USR_AGENTE equals a.AGE_CODIGO
+                        where a.AGE_CODIGO == agente
                         orderby us.UBO_DEFAULT descending
                         select new
                         {
@@ -40,6 +42,7 @@ public class BodegaController : ControllerBase
                           us.UBO_BODEGA,
                           us.UBO_USUARIO,
                           b.BOD_NOMBRE,
+                          b.BOD_CODIGO,
                           us.UBO_DEFAULT
                         }).ToListAsync();
 

@@ -1,6 +1,7 @@
 ﻿namespace PIGGISWS.Data;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph.CallRecords;
 using PIGGISWS.Models;
 using PIGGISWS.Models.Vistas;
 
@@ -36,6 +37,21 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cliente_Dia_Gestion_Nuevo> CLIENTE_DIA_GESTION_NUEVO { get; set; }
 
     public DbSet<Map_Cerca_Agente> MAP_CERCA_AGENTE { get; set; }
+    public DbSet<DFacturai> DFACTURAI { get; set; }
+
+    public DbSet<CComprobai> CCOMPROBAI { get; set; }
+
+    public DbSet<Ccomfaci> CCOMFACI { get; set; }
+
+    public DbSet<UMedida> UMEDIDA { get; set; }
+
+    public DbSet<DListapre> DLISTAPRE { get; set; }
+    public DbSet<Producto> PRODUCTO { get; set; }
+    public DbSet<CComproba> CCOMPROBA { get; set; }
+    public DbSet<CTipocom> CTIPOCOM { get; set; }
+
+    public DbSet<DFactura> DFACTURA { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -76,5 +92,31 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Map_Cerca_Agente>()
             .HasKey(a => new { a.ID_MAP_CERCA });
 
+
+        modelBuilder.Entity<DFacturai>()
+            .HasKey(a => new { a.DFAC_SECUENCIA, a.DFAC_CFAC_COMPROBA, a.DFAC_EMPRESA });
+        modelBuilder.Entity<CComprobai>()
+            .HasKey(a => new { a.CCO_CODIGO, a.CCO_EMPRESA });
+
+        modelBuilder.Entity<Ccomfaci>()
+            .HasKey(a => new { a.CFAC_CCO_COMPROBA, a.CFAC_EMPRESA });
+
+
+        modelBuilder.Entity<UMedida>()
+           .HasKey(a => new { a.UMD_CODIGO, a.UMD_EMPRESA });
+
+        modelBuilder.Entity<DListapre>()
+           .HasKey(a => new { a.DLP_CODIGO, a.DLP_LISTAPRE, a.DLP_EMPRESA });
+
+        modelBuilder.Entity<Producto>()
+         .HasKey(a => new { a.PRO_CODIGO, a.PRO_EMPRESA });
+
+        modelBuilder.Entity<CComproba>()
+           .HasKey(a => new { a.CCO_EMPRESA, a.CCO_CODIGO });
+
+        modelBuilder.Entity<CTipocom>()
+          .HasKey(a => new { a.CTI_CODIGO, a.CTI_EMPRESA });
+        modelBuilder.Entity<DFactura>()
+      .HasKey(a => new { a.DFAC_CFAC_COMPROBA, a.DFAC_EMPRESA, a.DFAC_SECUENCIA });
     }
 }
