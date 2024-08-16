@@ -2,6 +2,7 @@
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
+using System.Linq;
 
 namespace PIGGISWS.Services;
 
@@ -36,7 +37,7 @@ public class ProductoService : IProductoService
     {
 
         var response = new ServiceResponse<object>();
-        var fechaActual = DateTime.Today; //.AddMonths(-4);
+        var fechaActual = DateTime.Today;
 
 
         try
@@ -56,7 +57,7 @@ public class ProductoService : IProductoService
             var productos = await (from p in _context.PRODUCTO
                                    join um in _context.UMEDIDA on p.PRO_UNIDAD equals um.UMD_CODIGO
                                    join lp in _context.DLISTAPRE on p.PRO_CODIGO equals lp.DLP_PRODUCTO
-                                   
+
                                    where p.PRO_EMPRESA == p_empresa
                                      && p.PRO_INACTIVO != 1
                                      && (p.PRO_CRITICO ?? 0) == 0
@@ -68,14 +69,14 @@ public class ProductoService : IProductoService
                                    select new
                                    {
                                        lp.DLP_LISTAPRE,
-                                       p.PRO_NOMBRE, 
+                                       p.PRO_NOMBRE,
                                        p.PRO_CODIGO,
-                                       um.UMD_ID, 
-                                       p.PRO_ID, 
-                                       lp.DLP_FECHA_FIN, 
-                                       p.PRO_UNIDAD, 
-                                       p.PRO_UNIDAD2, 
-                                       p.PRO_IMPUESTO, 
+                                       um.UMD_ID,
+                                       p.PRO_ID,
+                                       lp.DLP_FECHA_FIN,
+                                       p.PRO_UNIDAD,
+                                       p.PRO_UNIDAD2,
+                                       p.PRO_IMPUESTO,
                                        p.PRO_PROMOCION
                                    }).GroupBy(x => x.PRO_CODIGO)
                                     .Select(g => g.First())
@@ -112,4 +113,104 @@ public class ProductoService : IProductoService
 
         return response;
     }
+
+    public async Task<ServiceResponse<object>> GetTopProductosxCliente(int cliente)
+    {
+
+        var response = new ServiceResponse<object>();
+        var fechaActual = DateTime.Today;
+        var cincoDiasAtras = DateTime.Now.AddDays(-5);
+        var siglas = new List<int> { 673 }; // Lista de siglas si necesitas más de una
+        int clienteId = 750398940;
+        int estadoExcluido = 9;
+
+
+        try
+        {
+
+            var listaprecios = await _context.CLIENTE
+                             .Where(cl => cl.CLI_EMPRESA == p_empresa
+                             && cl.CLI_CODIGO == cliente
+                             && (cl.CLI_INACTIVO ?? 0) == p_cli_Inactivo
+                             && cl.CLI_LISTAPRE != null)
+                            .Select(cl => cl.CLI_LISTAPRE ?? 0)
+                            .Distinct()
+                            .ToListAsync();
+
+            var productosVendidos = await _context.CCOMPROBA
+                                    .Where(cc => siglas.Contains(cc.CCO_SIGLA)
+                                     && cc.CCO_ESTADO != estadoExcluido
+                                     && cc.CCO_CODCLIPRO == clienteId
+                                     && cc.CCO_FECHA <= cincoDiasAtras)
+                                    .Join(_context.DFACTURA, cc => cc.CCO_CODIGO, d => d.DFAC_CFAC_COMPROBA, (cc, d) => new { cc, d })
+                                    .Join(_context.PRODUCTO, cd => cd.d.DFAC_PRODUCTO, p => p.PRO_CODIGO, (cd, p) => new { cd.d, p })
+                                    .GroupBy(x => x.p.PRO_CODIGO) 
+                                    .Select(g => g.Key) 
+                                    .OrderByDescending(x => x) 
+                                    .Take(8)
+                                    .ToListAsync();
+            var productosDestacadosIds = productosVendidos;
+
+            var productos = await (from p in _context.PRODUCTO
+                                   join um in _context.UMEDIDA on p.PRO_UNIDAD equals um.UMD_CODIGO
+                                   join lp in _context.DLISTAPRE on p.PRO_CODIGO equals lp.DLP_PRODUCTO
+
+                                   where p.PRO_EMPRESA == p_empresa
+                                     && p.PRO_INACTIVO != 1
+                                     && (p.PRO_CRITICO ?? 0) == 0
+                                     && (p.PRO_INACTIVO ?? 0) == 0
+                                     && lp.DLP_FECHA_INI <= fechaActual
+                                     && listaprecios.Contains(lp.DLP_LISTAPRE)
+                                     && (lp.DLP_INACTIVO ?? 0) == 0
+                                     && (lp.DLP_FECHA_FIN == null || lp.DLP_FECHA_FIN >= fechaActual)
+                                   select new
+                                   {
+                                       lp.DLP_LISTAPRE,
+                                       p.PRO_NOMBRE,
+                                       p.PRO_CODIGO,
+                                       um.UMD_ID,
+                                       p.PRO_ID,
+                                       lp.DLP_FECHA_FIN,
+                                       p.PRO_UNIDAD,
+                                       p.PRO_UNIDAD2,
+                                       p.PRO_IMPUESTO,
+                                       p.PRO_PROMOCION,
+                                       Destacado = productosDestacadosIds.Contains(p.PRO_CODIGO) || p.PRO_PROMOCION == 1
+
+                                   }).GroupBy(x => x.PRO_CODIGO)
+                                    .Select(g => g.First())
+                                    .ToListAsync();
+
+
+
+
+
+
+
+
+            if (productos == null || !productos.Any())
+            {
+                throw new NotFoundException("No se encontraron clientes.");
+            }
+
+            response.Data = productos;
+            response.Success = true;
+            response.Message = "Clientes encontrados exitosamente.";
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details (ex) here as needed
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los clientes.";
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
+    }
+
 }

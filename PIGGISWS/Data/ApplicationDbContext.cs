@@ -51,6 +51,17 @@ public class ApplicationDbContext : DbContext
     public DbSet<CTipocom> CTIPOCOM { get; set; }
 
     public DbSet<DFactura> DFACTURA { get; set; }
+    public DbSet<Provincia_Agente> PROVINCIA_AGENTE { get; set; }
+
+    public DbSet<Ubicacion> UBICACION { get; set; }
+
+    public DbSet<Canton> CANTON { get; set; }
+
+    public DbSet<Zona> ZONA { get; set; }
+
+    public DbSet<TEstableci> TESTABLECI { get; set; }
+    public DbSet<ListaPre> LISTAPRE { get; set; }
+    public DbSet<Precio_Agente> PRECIO_AGENTE { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -118,5 +129,26 @@ public class ApplicationDbContext : DbContext
           .HasKey(a => new { a.CTI_CODIGO, a.CTI_EMPRESA });
         modelBuilder.Entity<DFactura>()
       .HasKey(a => new { a.DFAC_CFAC_COMPROBA, a.DFAC_EMPRESA, a.DFAC_SECUENCIA });
+
+        modelBuilder.Entity<Provincia_Agente>()
+            .HasKey(pa => new { pa.ID_SECUENCIA_PK });
+
+        modelBuilder.Entity<Ubicacion>()
+          .HasKey(u => new { u.UBI_CODIGO, u.UBI_EMPRESA });
+        modelBuilder.Entity<Canton>()
+         .HasKey(u => new { u.ID_CANTON_PK});
+
+        modelBuilder.Entity<Zona>()
+        .HasKey(u => new { u.ZON_CODIGO, u.ZON_EMPRESA });
+
+
+        modelBuilder.Entity<TEstableci>()
+       .HasKey(u => new { u.TES_CODIGO, u.TES_EMPRESA });
+
+        modelBuilder.Entity<ListaPre>()
+       .HasKey(u => new { u.LPR_CODIGO , u.LPR_EMPRESA });
+
+        modelBuilder.Entity<Precio_Agente>()
+      .HasKey(u => new { u.ID_EMPRESA_FK, u.ID_PRECIO_AGENTE_PK });
     }
 }

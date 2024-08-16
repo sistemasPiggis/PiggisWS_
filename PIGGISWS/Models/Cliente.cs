@@ -12,7 +12,7 @@ public class Cliente
          public decimal CLI_EMPRESA { get; set; }
         [Key]
         [Display(Name = "Código de Empresa")]
-        public decimal CLI_CODIGO { get; set; }
+        public int CLI_CODIGO { get; set; }
 
         public string? CLI_ID { get; set; } = string.Empty;  
         

@@ -53,6 +53,8 @@ builder.Services.AddScoped<IAgenteService, AgenteService>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IUbicacionService, UbicacionService>();
+builder.Services.AddScoped<IListaPreciosService, ListaPreciosService>();
 
 var app = builder.Build();
 

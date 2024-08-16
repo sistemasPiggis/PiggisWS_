@@ -6,6 +6,8 @@ using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Models.Auxiliares;
+using PIGGISWS.Services.Utils;
+using System.Globalization;
 
 namespace PIGGISWS.Services;
 
@@ -47,30 +49,41 @@ public class ClientesService : IClientesService
 
     public async Task<ServiceResponse<object>> GetClientesxAgente(int agente)
     {
+        System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
 
+        // Crea un objeto CultureInfo en español
+        CultureInfo ci = new CultureInfo("es-ES");
+
+        // Obtiene el nombre del día de la semana en español
+        string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+
+        string dayformateado = dayName.ToUpper();
+        dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
 
         try
         {
             var clientes = await (from cl in _context.CLIENTE
-                                  where cl.CLI_EMPRESA == p_empresa
-                                     && cl.CLI_TIPO == p_cli_Tipo
-                                     && cl.CLI_INACTIVO == p_cli_Inactivo
-                                     && cl.CLI_BLOQUEO == p_cli_Bloqueo
-                                     && cl.CLI_AGENTE == agente
                                   join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
                                   join cd in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd.CDI_CLIENTE into cdGroup
                                   from cd in cdGroup.DefaultIfEmpty()
+                                  where cl.CLI_EMPRESA == p_empresa
+                                        && cl.CLI_TIPO == p_cli_Tipo
+                                        && cl.CLI_INACTIVO == p_cli_Inactivo
+                                        && cl.CLI_BLOQUEO == p_cli_Bloqueo
+                                        && cl.CLI_AGENTE == agente
+                                        && (cd.CDI_DIA != null && cd.CDI_DIA == dayformateado) 
                                   select new
                                   {
                                       cl.CLI_EMPRESA,
                                       cl.CLI_CODIGO,
                                       cl.CLI_NOMBRE,
                                       cl.CLI_AGENTE,
+                                      cl.CLI_ID, 
                                       CLI_LISTAPRE = cl.CLI_LISTAPRE ?? 0,
                                       CLI_ILIMITADOF = cl.CLI_ILIMITADO ?? 0,
                                       CLI_ZONA = cl.CLI_ZONA ?? 0,
-                                      cd.CDI_DIA,
+                                      CDI_DIA = cd != null ? cd.CDI_DIA : null,  
                                       cl.CLI_TELEFONO1,
                                       cl.CLI_POLITICAS,
                                       cl.CLI_DIRECCION,
@@ -84,12 +97,11 @@ public class ClientesService : IClientesService
                                       p.POL_LINEA_CREDITO,
                                       p.POL_DIAS_PLAZO,
                                       p.POL_NRO_PAGOS,
-                                      //FECHA_SUG = DateTime.Now, averiguar 
-                                      CUPO = 0,
-                                      DEUDA = 0
+                                      CUPO = 0,  // Asegúrate de que este valor se maneja según la lógica de negocio
+                                      DEUDA = 0  // Ídem
                                   })
-                             .OrderBy(x => x.CLI_NOMBRE)
-                                .ToListAsync();
+                 .OrderBy(x => x.CLI_NOMBRE)
+                 .ToListAsync();
 
 
             if (clientes == null || !clientes.Any())
@@ -178,14 +190,14 @@ public class ClientesService : IClientesService
                 }
 
 
-                // Suponiendo que 'clientes_Nuevos' contiene múltiples registros que necesitas agregar
+               
                 foreach (var nuevoCliente in clientes_Nuevos.Cliente_Dia_Gestion_Nuevo)
                 {
                     var nuevoClienteDia = new Cliente_Dia_Gestion_Nuevo
                     {
                         ID_EMPRESA_FK = p_empresa,
                         TIPO_GESTION_TX = nuevoCliente.TIPO_GESTION_TX,
-                        ID_CLIENTE_NUEVO_FK = cliente.CI_RUC, // Asegúrate de que esto tiene sentido en este contexto
+                        ID_CLIENTE_NUEVO_FK = cliente.CI_RUC, 
                         DIA_NR = nuevoCliente.DIA_NR,
                         INACTIVO_NR = nuevoCliente.INACTIVO_NR,
                         DIRECCION_CLIENTE = nuevoCliente.DIRECCION_CLIENTE,
@@ -222,26 +234,6 @@ public class ClientesService : IClientesService
 
 
 
-    //public async Task<ServiceResponse<object>> UpdateCliente(Cliente cliente)
-    //{
-    //    var response = new ServiceResponse<object>();
-    //    try
-    //    {
-    //       var cliente_ = new Cliente
-    //        {
-    //           CLI_NOMBRE = cliente.CLI_NOMBRE,
-    //           CLI_TELEFONO1 = cliente.CLI_TELEFONO1,
-
-    //        }
-
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        response.Message += ex.Message;
-    //        response.Data = null;
-    //        response.Success = false;
-    //    }
-    //}
 
 
 }

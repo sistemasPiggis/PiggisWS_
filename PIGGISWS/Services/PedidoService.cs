@@ -15,10 +15,10 @@ public class PedidoService:IPedidoService
 
     int p_empresa = 0;
     int p_cli_Tipo = 0;
-    int p_cli_Bloqueo = 0;
+    //int p_cli_Bloqueo = 0;
     int p_cli_Inactivo = 0;
-    int p_cli_cupo = 0;
-    string p_cli_estado = "";
+    //int p_cli_cupo = 0;
+    //string p_cli_estado = "";
     public PedidoService(ApplicationDbContext context)
     {
         _context = context;
