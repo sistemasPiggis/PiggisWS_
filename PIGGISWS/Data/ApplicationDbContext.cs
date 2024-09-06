@@ -2,6 +2,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph.CallRecords;
+using PIGGISWS.Controllers;
 using PIGGISWS.Models;
 using PIGGISWS.Models.Vistas;
 
@@ -62,7 +63,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<TEstableci> TESTABLECI { get; set; }
     public DbSet<ListaPre> LISTAPRE { get; set; }
     public DbSet<Precio_Agente> PRECIO_AGENTE { get; set; }
-
+    public DbSet<Cliente_Ext> CLIENTE_EXT { get; set; }
+    public DbSet<Notificaciones> NOTIFICACIONES { get; set; }
+    public DbSet<Notificaciones_Grupos> NOTIFICACIONES_GRUPOS { get; set; }
+    public DbSet<Fcm_Token> FCM_TOKEN { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -150,5 +154,17 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Precio_Agente>()
       .HasKey(u => new { u.ID_EMPRESA_FK, u.ID_PRECIO_AGENTE_PK });
+
+        modelBuilder.Entity<Cliente_Ext>()
+      .HasKey(u => new { u.CLI_CODIGO, u.CLI_EMPRESA });
+
+
+        modelBuilder.Entity<Notificaciones>()
+     .HasKey(u => new { u.NOT_EMPRESA, u.NOT_CODIGO });
+
+        modelBuilder.Entity<Notificaciones_Grupos>()
+     .HasKey(u => new { u.NOT_EMPRESA, u.NOT_NOT_CODIGO });
+        modelBuilder.Entity<Fcm_Token>()
+     .HasKey(u => new { u.FCM_CODIGO });
     }
 }

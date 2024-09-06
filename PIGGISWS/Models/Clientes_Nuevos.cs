@@ -28,7 +28,7 @@ public class Clientes_Nuevos
     [Required]
     public string DIRECCION_CLIENTE { get; set; } = string.Empty;
     public int ID_ESTABLECIMIENTO_FK { get; set; }
-    public int ID_LISTA_PRECIO_FK { get; set; }
+    public long ID_LISTA_PRECIO_FK { get; set; }
 
     public string ESTADO {  get; set; }= string.Empty;
     [Required]
@@ -38,7 +38,7 @@ public class Clientes_Nuevos
     public string DIRECCION_ENTREGA { get; set; } = string.Empty ;
     [Required]
     public int TIPO_IDENTIFICACION { get; set; }
-    public int LATITUD_NR {  get; set; }
-    public int LONGITUD_NR { get; set;}
+    public int? LATITUD_NR {  get; set; }
+    public int? LONGITUD_NR { get; set;}
 
 }

@@ -9,7 +9,10 @@ using Microsoft.Identity.Web.UI;
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Services;
+using PIGGISWS.Services.Utils;
 using System.Configuration;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,15 +20,15 @@ var builder = WebApplication.CreateBuilder(args);
 var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ?? builder.Configuration["MicrosoftGraph:Scopes"]?.Split(' ');
 
 ////// Add services to the container.
-//builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-//    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
-//        .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
-//            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
-//            .AddInMemoryTokenCaches();
+builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
+        .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
+            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
+            .AddInMemoryTokenCaches();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-  .AddMicrosoftIdentityWebApi(builder.Configuration);
-builder.Services.AddAuthorization();
+//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//  .AddMicrosoftIdentityWebApi(builder.Configuration);
+//builder.Services.AddAuthorization();
 
 
 
@@ -38,6 +41,7 @@ builder.Services.AddControllersWithViews(options =>
 });
 builder.Services.AddRazorPages()
     .AddMicrosoftIdentityUI();
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 
 
@@ -55,6 +59,15 @@ builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IUbicacionService, UbicacionService>();
 builder.Services.AddScoped<IListaPreciosService, ListaPreciosService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<FirebaseNotificationService>();
+
+
+// Configurar logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(); // Para loggear en la consola
+builder.Logging.AddDebug(); // Para loggear en la ventana de salida de Visual Studio
+builder.Logging.AddEventSourceLogger(); // Otras opciones de logging
 
 var app = builder.Build();
 
@@ -63,6 +76,12 @@ app.UseCors(options =>
     .AllowAnyMethod()
     .AllowAnyHeader())
     ;
+
+// Inicialización de FirebaseApp
+//FirebaseApp.Create(new AppOptions()
+//{
+//    Credential = GoogleCredential.FromFile("path/to/serviceAccountKey.json"),
+//});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

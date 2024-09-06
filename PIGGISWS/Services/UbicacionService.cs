@@ -195,14 +195,20 @@ public class UbicacionService :IUbicacionService
 
         }
 
-    public async Task<ServiceResponse<object>> GetZonasxCanton(List<Canton> cantones)
+    public async Task<ServiceResponse<object>> GetZonasxAgenteAsync(int agente)
     {
 
         var response = new ServiceResponse<object>();
-        var idsCantones = cantones.Select(c => (int?)c.ID_CANTON_PK).ToList();
+
+
+        
 
         try
         {
+            var idsCantones = await (from pa in _context.PROVINCIA_AGENTE
+                                     join ca in _context.CANTON on pa.ID_PROVINCIA_FK equals ca.ID_PROVINCIA_FK
+                                     select ca.ID_CANTON_PK).ToListAsync();
+
             var query1 = await( from z in _context.ZONA
                           where z.ZON_EMPRESA == p_empresa
                           && idsCantones.Contains(z.ZON_CANTON_FK)
@@ -210,19 +216,24 @@ public class UbicacionService :IUbicacionService
                           && z.ZON_CANTON_FK != null
                           select new 
                           {
-                              Nombre = z.ZON_NOMBRE,
-                              Codigo = z.ZON_CODIGO
+                              ZON_NOMBRE = z.ZON_NOMBRE,
+                              ZON_CODIGO = z.ZON_CODIGO,
+                              ZON_ORDEN= z.ZON_ORDEN,
+                              ZON_CANTON_FK =z.ZON_CANTON_FK, 
+                              ZON_ID = z.ZON_ID
                           }).ToListAsync();
 
             
             var query2 = await (from z in _context.ZONA
                          where z.ZON_EMPRESA == 1
-                         && z.ZON_CANTON_FK == null
                          && z.ZON_ID == "0000"
                          select new 
                          {
-                             Nombre = z.ZON_NOMBRE,
-                             Codigo = z.ZON_CODIGO
+                             ZON_NOMBRE = z.ZON_NOMBRE,
+                             ZON_CODIGO = z.ZON_CODIGO,
+                             ZON_ORDEN = z.ZON_ORDEN,
+                             ZON_CANTON_FK = 0,
+                             ZON_ID = z.ZON_ID
                          }).ToListAsync();
 
             // Unión de ambas consultas

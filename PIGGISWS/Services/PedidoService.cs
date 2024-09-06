@@ -14,7 +14,7 @@ public class PedidoService:IPedidoService
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
 
     int p_empresa = 0;
-    int p_cli_Tipo = 0;
+    //int p_cli_Tipo = 0;
     //int p_cli_Bloqueo = 0;
     int p_cli_Inactivo = 0;
     //int p_cli_cupo = 0;

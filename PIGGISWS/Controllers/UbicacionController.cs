@@ -79,14 +79,14 @@ public class UbicacionController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("GetZonasxCanton")]
+    [HttpGet("GetZonasxAgenteAsync/{agente}")]
 
-    public async Task<IActionResult> GetZonasxCanton([FromBody] List<Canton> cantones)
+    public async Task<IActionResult> GetZonasxAgenteAsync(int agente)
     {
 
 
 
-        var response = await _ubicacionservice.GetZonasxCanton(cantones);
+        var response = await _ubicacionservice.GetZonasxAgenteAsync(agente);
 
         if (response.Success)
         {

@@ -12,7 +12,7 @@ public class ListaPreciosService: IListaPreciosService
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
 
     int p_empresa = 0;
-    int p_cli_Tipo = 0;
+    //int p_cli_Tipo = 0;
     //int p_cli_Bloqueo = 0;
     int P_LDP_INACTIVO = 0;
     //int p_cli_cupo = 0;

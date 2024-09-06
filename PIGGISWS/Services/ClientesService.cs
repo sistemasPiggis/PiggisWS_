@@ -6,14 +6,17 @@ using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Models.Auxiliares;
+using PIGGISWS.Models.DTOs;
 using PIGGISWS.Services.Utils;
 using System.Globalization;
+using System.Text;
 
 namespace PIGGISWS.Services;
 
 public class ClientesService : IClientesService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEmailService _emailService;
     // GET: Clienteprivate readonly ApplicationDbContext _context;
     ModelResponse model = new ModelResponse();
     Cliente cliente = new Cliente();
@@ -28,11 +31,13 @@ public class ClientesService : IClientesService
     int p_cli_Inactivo = 0;
     int p_cli_cupo = 0;
     string p_cli_estado = "";
-    public ClientesService(ApplicationDbContext context)
+    string P_CLI_NOT_MAILS;
+    public ClientesService(ApplicationDbContext context, IEmailService emailService)
     {
         _context = context;
+       
+        _emailService = emailService;
         GetParametros();
-
     }
 
     public void GetParametros()
@@ -44,6 +49,7 @@ public class ClientesService : IClientesService
         p_cli_Inactivo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 6)?.VALOR ?? "0");
         p_cli_cupo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 7)?.VALOR ?? "0");
         p_cli_estado = parametros.First(p => p.CODIGO == 8)?.VALOR ?? "";
+        P_CLI_NOT_MAILS = parametros.First(p => p.CODIGO == 19)?.VALOR ?? "";
     }
 
 
@@ -65,6 +71,7 @@ public class ClientesService : IClientesService
         {
             var clientes = await (from cl in _context.CLIENTE
                                   join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                                  join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
                                   join cd in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd.CDI_CLIENTE into cdGroup
                                   from cd in cdGroup.DefaultIfEmpty()
                                   where cl.CLI_EMPRESA == p_empresa
@@ -87,9 +94,13 @@ public class ClientesService : IClientesService
                                       cl.CLI_TELEFONO1,
                                       cl.CLI_POLITICAS,
                                       cl.CLI_DIRECCION,
+                                      cl.CLI_DIR_ENTREGA, 
+                                      cl.CLI_NOMBRECOM,
                                       cl.CLI_MAIL,
                                       cl.CLI_RUC_CEDULA,
-                                      cl.CLI_CIUDAD,
+                                      ce.ID_PROVINCIA_FK,
+                                      ce.ID_CANTON_FK,
+                                      cl.CLI_ESTABLECIMIENTO,
                                       p.POL_PORC_DESC,
                                       p.POL_PORC_FINANC,
                                       p.POL_PORC_PRO_PAGO,
@@ -97,6 +108,7 @@ public class ClientesService : IClientesService
                                       p.POL_LINEA_CREDITO,
                                       p.POL_DIAS_PLAZO,
                                       p.POL_NRO_PAGOS,
+                                      cl.CLI_PARROQUIA,
                                       CUPO = 0,  // Asegúrate de que este valor se maneja según la lógica de negocio
                                       DEUDA = 0  // Ídem
                                   })
@@ -129,7 +141,7 @@ public class ClientesService : IClientesService
         return response;
     }
 
-    public async Task<ServiceResponse<object>> CreateCliente(AuxClientesNuevos clientes_Nuevos)
+    public async Task<ServiceResponse<object>> CreateClienteAsync(AuxClientesNuevos clientes_Nuevos)
     {
 
         var response = new ServiceResponse<object>();
@@ -233,7 +245,225 @@ public class ClientesService : IClientesService
     }
 
 
+    public async Task<ServiceResponse<object>> GetClientexCodigo(long cli_codigo)
+    {
 
+        // Crea un objeto CultureInfo en español
+        CultureInfo ci = new CultureInfo("es-ES");
+
+        var response = new ServiceResponse<object>();
+
+        try
+        {
+            var clientes = await (from cl in _context.CLIENTE
+                                  join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                                  join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                                  //join cd in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd.CDI_CLIENTE into cdGroup
+                                  //from cd in cdGroup.DefaultIfEmpty()
+                                  where cl.CLI_EMPRESA == p_empresa
+                                        && cl.CLI_TIPO == p_cli_Tipo
+                                        && cl.CLI_INACTIVO == p_cli_Inactivo
+                                        && cl.CLI_BLOQUEO == p_cli_Bloqueo
+                                        && cl.CLI_CODIGO == cli_codigo
+
+                                  select new
+                                  {
+                                      cl.CLI_EMPRESA,
+                                      cl.CLI_CODIGO,
+                                      cl.CLI_NOMBRE,
+                                      cl.CLI_NOMBRECOM,
+                                      cl.CLI_AGENTE,
+                                      cl.CLI_ID,
+                                      CLI_LISTAPRE = cl.CLI_LISTAPRE ?? 0,
+                                      CLI_ILIMITADOF = cl.CLI_ILIMITADO ?? 0,
+                                      CLI_ZONA = cl.CLI_ZONA ?? 0,
+                                      ////CDI_DIA = cd != null ? cd.CDI_DIA : null,
+                                      cl.CLI_TELEFONO1,
+                                      cl.CLI_POLITICAS,
+                                      cl.CLI_DIRECCION,
+                                      cl.CLI_DIR_ENTREGA,
+                                      cl.CLI_MAIL,
+                                      cl.CLI_RUC_CEDULA,
+                                      cl.CLI_ESTABLECIMIENTO,
+                                      cl.CLI_PARROQUIA,
+                                      ce.ID_PROVINCIA_FK,
+                                      ce.ID_CANTON_FK,
+                                      p.POL_PORC_DESC,
+                                      p.POL_PORC_FINANC,
+                                      p.POL_PORC_PRO_PAGO,
+                                      p.POL_PORC_PAG_CONTA,
+                                      p.POL_LINEA_CREDITO,
+                                      p.POL_DIAS_PLAZO,
+                                      p.POL_NRO_PAGOS,
+                                      CUPO = 0,  // Asegúrate de que este valor se maneja según la lógica de negocio
+                                      DEUDA = 0  // Ídem
+                                  })
+                 .OrderBy(x => x.CLI_NOMBRE)
+                 .ToListAsync();
+
+            var cliente = clientes.FirstOrDefault();
+
+            if (cliente == null )
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "Cliente no encontrado.";
+                return response;
+            }
+
+
+            response.Data = cliente;
+            response.Success = true;
+            response.Message = "Clientes encontrados exitosamente.";
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details (ex) here as needed
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los clientes.";
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
+    }
+
+
+    public async Task<ServiceResponse<object>> EditClienteAsync(Cliente_ClienteExt cliente)
+    {
+
+        var response = new ServiceResponse<object>();
+
+        try
+        {
+            if (cliente != null)
+            {
+                var _singlecliente_ = await (_context.CLIENTE.Where(c => c.CLI_CODIGO == cliente.Cliente.CLI_CODIGO).ToListAsync());
+                var _singlecliente = _singlecliente_.FirstOrDefault();
+                var _clienteExt_ = await (_context.CLIENTE_EXT.Where(ce => ce.CLI_CODIGO == cliente.Cliente.CLI_CODIGO).ToListAsync());
+                var _clienteExt = _clienteExt_.FirstOrDefault();
+
+
+                if (_singlecliente == null)
+                {
+                    response.Data = null;
+                    response.Success = true;
+                    response.Message = "No se encontraron clientes.";
+                }
+
+                var oldValues = new
+                {
+                    Nombre = _singlecliente.CLI_NOMBRE,
+                    Direccion = _singlecliente.CLI_DIRECCION,
+                    DireccionEntrega = _singlecliente.CLI_DIR_ENTREGA,
+                    Email = _singlecliente.CLI_MAIL,
+                    Establecimiento = _singlecliente.CLI_ESTABLECIMIENTO,
+                    Parroquia = _singlecliente.CLI_PARROQUIA, 
+                    Provincia = _clienteExt.ID_PROVINCIA_FK,
+                    Canton = _clienteExt.ID_CANTON_FK
+                };
+
+
+                
+                _singlecliente.CLI_DIRECCION = cliente.Cliente.CLI_DIRECCION;
+                _singlecliente.CLI_DIR_ENTREGA = cliente.Cliente.CLI_DIR_ENTREGA;
+                _singlecliente.CLI_MAIL = cliente.Cliente.CLI_MAIL;
+                
+                _singlecliente.CLI_PARROQUIA = cliente.Cliente.CLI_PARROQUIA;
+                _clienteExt.ID_PROVINCIA_FK = cliente.Cliente_Ext.ID_PROVINCIA_FK;
+                _clienteExt.ID_CANTON_FK = cliente.Cliente_Ext.ID_CANTON_FK;
+                _singlecliente.CLI_ESTABLECIMIENTO = cliente.Cliente.CLI_ESTABLECIMIENTO;
+                _context.Entry(_singlecliente).Property(x => x.CLI_DIRECCION).IsModified = true;
+                _context.Entry(_singlecliente).Property(x => x.CLI_DIR_ENTREGA).IsModified = true;
+                _context.Entry(_singlecliente).Property(x => x.CLI_MAIL).IsModified = true;
+                _context.Entry(_singlecliente).Property(x=> x.CLI_PARROQUIA).IsModified = true;
+                _context.Entry(_singlecliente).Property(x => x.CLI_ESTABLECIMIENTO).IsModified = true;
+                await _context.SaveChangesAsync();
+
+
+                var updatedValues = new
+                {
+                    Nombre = _singlecliente.CLI_NOMBRE,
+                    Direccion = _singlecliente.CLI_DIRECCION,
+                    DireccionEntrega = _singlecliente.CLI_DIR_ENTREGA,
+                    Email = _singlecliente.CLI_MAIL,
+                    Establecimiento = _singlecliente.CLI_ESTABLECIMIENTO,
+                    Parroquia = _singlecliente.CLI_PARROQUIA,
+                    Provincia = _clienteExt.ID_PROVINCIA_FK,
+                    Canton = _clienteExt.ID_CANTON_FK
+                };
+
+                var sb = new StringBuilder();
+                sb.AppendLine("Se han actualizado los datos del cliente con los siguientes cambios:");
+                sb.AppendLine();
+            
+                if (oldValues.Direccion != updatedValues.Direccion)
+                    sb.AppendLine($"Dirección De: {oldValues.Direccion}  -> A: {updatedValues.Direccion}");
+                if (oldValues.DireccionEntrega != updatedValues.DireccionEntrega)
+                    sb.AppendLine($"Dirección de Entrega De: {oldValues.DireccionEntrega}  -> A: {updatedValues.DireccionEntrega}");
+                if (oldValues.Email != updatedValues.Email)
+                    sb.AppendLine($"Email De: {oldValues.Email}  -> A: {updatedValues.Email}");
+                //if (oldValues.Zona != updatedValues.Zona)
+                //    {
+                //    var azona = await (_context.ZONA.FirstAsync(z => z.ZON_CODIGO == oldValues.Zona));
+                //    var nzona = await (_context.ZONA.FirstAsync(z => z.ZON_CODIGO == updatedValues.Zona));
+                //    sb.AppendLine($"Email: {azona.ZON_NOMBRE} -> {nzona.ZON_NOMBRE}");
+                //}
+                if (oldValues.Parroquia != updatedValues.Parroquia)
+                {
+                    var aparroquia = await (_context.UBICACION.Where(z => z.UBI_CODIGO == oldValues.Parroquia)).ToListAsync();
+                    var nparroquia = await (_context.UBICACION.Where(z => z.UBI_CODIGO == updatedValues.Parroquia)).ToListAsync();
+                    sb.AppendLine($"Parroquia De: {aparroquia.FirstOrDefault()?.UBI_NOMBRE}  -> A: {nparroquia.FirstOrDefault()?.UBI_NOMBRE}");
+                }
+                if (oldValues.Provincia != updatedValues.Provincia)
+                {
+                    var aprovincia = await (_context.PROVINCIA.Where(z => z.ID_PROVINCIA_PK == oldValues.Provincia).ToListAsync());
+                    var nprovincia = await (_context.PROVINCIA.Where(z => z.ID_PROVINCIA_PK == updatedValues.Provincia).ToListAsync());
+                    sb.AppendLine($"Provincia De: {aprovincia.FirstOrDefault()?.NOMBRE_TX}  -> A: {nprovincia.FirstOrDefault()?.NOMBRE_TX}");
+                }
+                if (oldValues.Canton != updatedValues.Canton)
+                {
+                    var acanton = await (_context.CANTON.Where(z => z.ID_CANTON_PK == oldValues.Canton)).ToListAsync();
+                    var ncanton = await (_context.CANTON.Where(z => z.ID_CANTON_PK == updatedValues.Canton)).ToListAsync();
+                    sb.AppendLine($"Cantón De: {acanton.FirstOrDefault()?.NOMBRE_TX}  -> A: {ncanton.FirstOrDefault()?.NOMBRE_TX}");
+                }
+
+                if (oldValues.Establecimiento != updatedValues.Establecimiento)
+                {
+                    var aestable = await (_context.TESTABLECI.Where(z => z.TES_CODIGO == oldValues.Establecimiento)).ToListAsync();
+                    var nestable = await (_context.TESTABLECI.Where(z => z.TES_CODIGO == updatedValues.Establecimiento)).ToListAsync();
+                    sb.AppendLine($"Establecimiento De: {aestable.FirstOrDefault()?.TES_NOMBRE}  -> A: {nestable.FirstOrDefault()?.TES_NOMBRE}");
+                }
+
+                sb.AppendLine();
+                sb.AppendLine("Por favor revise los cambios realizados.");
+
+                string email = await _emailService.SendEmailAsync(P_CLI_NOT_MAILS, "ATENCIÓN ACTUALIZACIÓN DE CLIENTE" + " " + _singlecliente.CLI_NOMBRE, sb.ToString());
+
+                response.Data = _singlecliente;
+                response.Success = true;
+                response.Message = "Cliente Actualizado " + email;
+            }
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los clientes. " + ex;
+            
+        }
+
+        return response;
+    }
 
 
 }
