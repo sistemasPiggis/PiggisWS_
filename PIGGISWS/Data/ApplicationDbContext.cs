@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph.CallRecords;
 using PIGGISWS.Controllers;
 using PIGGISWS.Models;
+using PIGGISWS.Models.DTOs;
 using PIGGISWS.Models.Vistas;
 
 public class ApplicationDbContext : DbContext
@@ -67,6 +68,14 @@ public class ApplicationDbContext : DbContext
     public DbSet<Notificaciones> NOTIFICACIONES { get; set; }
     public DbSet<Notificaciones_Grupos> NOTIFICACIONES_GRUPOS { get; set; }
     public DbSet<Fcm_Token> FCM_TOKEN { get; set; }
+    public DbSet<Dtipocom> DTIPOCOM {  get; set; }
+    public DbSet<Sistema> SISTEMA { get; set; }
+    public DbSet<Impuesto> IMPUESTO {  get; set; }
+    public DbSet<Totali> TOTALI { get; set; }
+    public DbSet<DListadsc> DLISTADSC { get; set; }
+    public DbSet<Rutero> RUTERO { get; set; }
+    public DbSet<AgentePedidoCalendario> AGENTE_CALENDARIO_PEDIDO { get; set; }
+    public DbSet<NextVal> NEXVAL { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -164,7 +173,39 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Notificaciones_Grupos>()
      .HasKey(u => new { u.NOT_EMPRESA, u.NOT_NOT_CODIGO });
+       
         modelBuilder.Entity<Fcm_Token>()
      .HasKey(u => new { u.FCM_CODIGO });
+
+        modelBuilder.Entity<Dtipocom>()
+    .HasKey(u => new { u.DTI_EMPRESA, u.DTI_CTI_CODIGO });
+
+
+        modelBuilder.Entity<Sistema>()
+    .HasKey(u => new { u.SIS_CODIGO });
+
+        modelBuilder.Entity<Impuesto>()
+    .HasKey(u => new { u.IMP_CODIGO });
+
+        modelBuilder.Entity<Totali>()
+  .HasKey(u => new { u.TOT_CCO_COMPROBA });
+
+        modelBuilder.Entity<DListadsc>()
+ .HasKey(u => new { u.DLD_CODIGO });
+
+        modelBuilder.Entity<Rutero>()
+ .HasKey(u => new { u.RUT_EMPRESA, u.RUT_CLIENTE, u.RUT_AGENTE });
+
+
+        modelBuilder.Entity<AgentePedidoCalendario>()
+        .HasKey(u => new { u.AGE_ID_CALENDARIO_PK });
+
+        modelBuilder.Entity<NextVal>()
+ .HasKey(u => new { u.NextVl });
+
+
     }
 }
+
+  
+

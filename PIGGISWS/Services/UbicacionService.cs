@@ -333,10 +333,6 @@ public class UbicacionService :IUbicacionService
         try
         {
 
-
-
-
-
             var provinciasQuery = await (from p in _context.PROVINCIA
                                          join pa in _context.PROVINCIA_AGENTE on p.ID_PROVINCIA_PK equals pa.ID_PROVINCIA_FK
                                          join c in _context.CANTON on p.ID_PROVINCIA_PK equals c.ID_PROVINCIA_FK

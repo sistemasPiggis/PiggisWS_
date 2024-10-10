@@ -79,7 +79,7 @@ public class ClientesService : IClientesService
                                         && cl.CLI_INACTIVO == p_cli_Inactivo
                                         && cl.CLI_BLOQUEO == p_cli_Bloqueo
                                         && cl.CLI_AGENTE == agente
-                                        && (cd.CDI_DIA != null && cd.CDI_DIA == dayformateado) 
+                                        && (cd.CDI_DIA != null && cd.CDI_DIA ==  dayformateado) 
                                   select new
                                   {
                                       cl.CLI_EMPRESA,
@@ -98,8 +98,8 @@ public class ClientesService : IClientesService
                                       cl.CLI_NOMBRECOM,
                                       cl.CLI_MAIL,
                                       cl.CLI_RUC_CEDULA,
-                                      ce.ID_PROVINCIA_FK,
-                                      ce.ID_CANTON_FK,
+                                      ID_PROVINCIA_FK = ce.ID_PROVINCIA_FK ?? 0,
+                                      ID_CANTON_FK= ce.ID_CANTON_FK ?? 0,
                                       cl.CLI_ESTABLECIMIENTO,
                                       p.POL_PORC_DESC,
                                       p.POL_PORC_FINANC,

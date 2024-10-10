@@ -12,4 +12,10 @@ public class Producto
     public int? PRO_IMPUESTO { get; set; }   
     public int? PRO_PROMOCION {  get; set; }
     public int? PRO_CRITICO { get; set; }
+
+    ////
+    ///
+    public decimal DLP_PRECIO { get; set; } = decimal.Zero;
+    public decimal DLP_PRECIO2 { get; set; } = decimal.Zero;
+    public decimal DLP_DESCUENTO { get; set; } = decimal.Zero;
 }

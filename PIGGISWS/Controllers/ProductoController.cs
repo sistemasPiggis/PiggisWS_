@@ -8,6 +8,7 @@ namespace PIGGISWS.Controllers;
 [Route("[controller]")]
 public class ProductoController : ControllerBase
 {
+
     private readonly IProductoService _productoservice;
 
     public ProductoController(IProductoService productoervices)
@@ -24,6 +25,21 @@ public class ProductoController : ControllerBase
 
 
         var response = await _productoservice.GetProductosxAgente(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+    [Authorize]
+    [HttpGet("GetTopProductosxAgente/{agente}")]
+    public async Task<IActionResult> GetTopProductosxAgente(int agente)
+    {
+        var response = await _productoservice.GetTopProductosxAgente(agente);
 
         if (response.Success)
         {

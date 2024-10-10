@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models.Auxiliares;
+using PIGGISWS.Models.DTOs;
 
 namespace PIGGISWS.Controllers;
 [ApiController]
@@ -36,7 +37,7 @@ public class PedidoController : Controller
         return BadRequest(response.Message);
     }
 
-
+    
 
     [Authorize]
     [HttpPost("GetPedidosDetalle")]
@@ -47,6 +48,28 @@ public class PedidoController : Controller
 
 
         var response = await _pedidoservice.GetPedidosDetalle(auxPedido);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+
+
+    [Authorize]
+    [HttpPost("CreatePedidoAsync")]
+
+    public async Task<IActionResult> CreatePedidoAsync([FromBody] AuxNuevoPedido auxNuevoPedido)
+    {
+
+
+
+        var response = await _pedidoservice.CreatePedidoAsync(auxNuevoPedido);
 
         if (response.Success)
         {

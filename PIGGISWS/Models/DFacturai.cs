@@ -1,9 +1,12 @@
-﻿namespace PIGGISWS.Models;
+﻿using Microsoft.Graph;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace PIGGISWS.Models;
 
 public class DFacturai
 {
     public int DFAC_EMPRESA {  get; set; }
-    public int DFAC_CFAC_COMPROBA { get; set; }
+    public decimal DFAC_CFAC_COMPROBA { get; set; }
     public int DFAC_SECUENCIA { get; set; }
     public int? DFAC_PRODUCTO { get; set; }
     public int?  DFAC_CATPRODUCTO { get; set; }
@@ -25,5 +28,14 @@ public class DFacturai
     public decimal DFAC_CDIGITADA { get; set; }
     public decimal DFAC_CEQ {  get; set; }
     public int DFAC_UEQ { get; set; }
+    public int DFAC_PROMOCION { get; set; }
     public decimal DFAC_CANT_PEDIDA { get; set; }
+    public Decimal DFAC_CAPRDIGITADA { get; set; }
+
+    [NotMapped]
+    public int DFAC_ESTADO {  get; set; }
+
+    //para llevar el nombre del producto 
+    [NotMapped]
+    public string PRO_NOMBRE { get; set; } = string.Empty;
 }

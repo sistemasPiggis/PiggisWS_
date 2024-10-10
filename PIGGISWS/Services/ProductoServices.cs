@@ -2,6 +2,8 @@
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
+using PIGGISWS.Services.Utils;
+using System.Globalization;
 using System.Linq;
 
 namespace PIGGISWS.Services;
@@ -38,7 +40,7 @@ public class ProductoService : IProductoService
 
         var response = new ServiceResponse<object>();
         var fechaActual = DateTime.Today;
-
+        DateTime d = fechaActual.Date;
 
         try
         {
@@ -54,32 +56,38 @@ public class ProductoService : IProductoService
 
 
 
-            var productos = await (from p in _context.PRODUCTO
-                                   join um in _context.UMEDIDA on p.PRO_UNIDAD equals um.UMD_CODIGO
-                                   join lp in _context.DLISTAPRE on p.PRO_CODIGO equals lp.DLP_PRODUCTO
-
+            var productos = await (from l in _context.LISTAPRE 
+                                   join dl in _context.DLISTAPRE on l.LPR_CODIGO equals dl.DLP_LISTAPRE
+                                   join p in _context.PRODUCTO on dl.DLP_PRODUCTO equals p.PRO_CODIGO
+                                   join u in _context.UMEDIDA on p.PRO_UNIDAD equals u.UMD_CODIGO
                                    where p.PRO_EMPRESA == p_empresa
                                      && p.PRO_INACTIVO != 1
                                      && (p.PRO_CRITICO ?? 0) == 0
                                      && (p.PRO_INACTIVO ?? 0) == 0
-                                     && lp.DLP_FECHA_INI <= fechaActual
-                                     && listaprecios.Contains(lp.DLP_LISTAPRE)
-                                     && (lp.DLP_INACTIVO ?? 0) == 0
-                                     && (lp.DLP_FECHA_FIN == null || lp.DLP_FECHA_FIN >= fechaActual)
+                                     && dl.DLP_FECHA_INI <= fechaActual
+                                     && (dl.DLP_FECHA_FIN == null || dl.DLP_FECHA_FIN >= fechaActual)
+                                     && listaprecios.Contains(l.LPR_CODIGO)
+                                     && (dl.DLP_INACTIVO ?? 0) == 0
+                                     //&& p.PRO_CODIGO == 90002865
+
                                    select new
                                    {
-                                       lp.DLP_LISTAPRE,
+                                       dl.DLP_LISTAPRE,
                                        p.PRO_NOMBRE,
                                        p.PRO_CODIGO,
-                                       um.UMD_ID,
+                                       u.UMD_ID,
                                        p.PRO_ID,
-                                       lp.DLP_FECHA_FIN,
+                                       dl.DLP_FECHA_FIN,
+                                       dl.DLP_FECHA_INI,
                                        p.PRO_UNIDAD,
                                        p.PRO_UNIDAD2,
                                        p.PRO_IMPUESTO,
-                                       p.PRO_PROMOCION
-                                   }).GroupBy(x => x.PRO_CODIGO)
-                                    .Select(g => g.First())
+                                       p.PRO_PROMOCION,
+                                       DESTACADO = p.PRO_PROMOCION == 1,
+                                       dl.DLP_PRECIO, 
+                                       //lp.DLP_PRECIO2,
+                                       //lp.DLP_DESCUENTO
+                                   })
                                     .ToListAsync();
 
 
@@ -91,7 +99,9 @@ public class ProductoService : IProductoService
 
             if (productos == null || !productos.Any())
             {
-                throw new NotFoundException("No se encontraron clientes.");
+                response.Data = productos;
+                response.Success = true;
+                response.Message = "No se Encontraron Productos";
             }
 
             response.Data = productos;
@@ -114,72 +124,62 @@ public class ProductoService : IProductoService
         return response;
     }
 
-    public async Task<ServiceResponse<object>> GetTopProductosxCliente(int cliente)
+    public async Task<ServiceResponse<object>> GetTopProductosxAgente(int agente)
     {
 
         var response = new ServiceResponse<object>();
         var fechaActual = DateTime.Today;
-        var cincoDiasAtras = DateTime.Now.AddDays(-5);
-        var siglas = new List<int> { 673 }; // Lista de siglas si necesitas más de una
-        int clienteId = 750398940;
+        var p_dias_lapso = DateTime.Now.AddDays(-90);
+        var siglas = new List<int> { 673 }; 
+        long clienteId = 750398940;
         int estadoExcluido = 9;
+        System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
+
+        // Crea un objeto CultureInfo en español
+        CultureInfo ci = new CultureInfo("es-ES");
+
+        // Obtiene el nombre del día de la semana en español
+        string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+
+        string dayformateado = dayName.ToUpper();
+        dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
 
 
         try
         {
 
-            var listaprecios = await _context.CLIENTE
-                             .Where(cl => cl.CLI_EMPRESA == p_empresa
-                             && cl.CLI_CODIGO == cliente
-                             && (cl.CLI_INACTIVO ?? 0) == p_cli_Inactivo
-                             && cl.CLI_LISTAPRE != null)
-                            .Select(cl => cl.CLI_LISTAPRE ?? 0)
-                            .Distinct()
-                            .ToListAsync();
 
-            var productosVendidos = await _context.CCOMPROBA
-                                    .Where(cc => siglas.Contains(cc.CCO_SIGLA)
-                                     && cc.CCO_ESTADO != estadoExcluido
-                                     && cc.CCO_CODCLIPRO == clienteId
-                                     && cc.CCO_FECHA <= cincoDiasAtras)
-                                    .Join(_context.DFACTURA, cc => cc.CCO_CODIGO, d => d.DFAC_CFAC_COMPROBA, (cc, d) => new { cc, d })
-                                    .Join(_context.PRODUCTO, cd => cd.d.DFAC_PRODUCTO, p => p.PRO_CODIGO, (cd, p) => new { cd.d, p })
-                                    .GroupBy(x => x.p.PRO_CODIGO) 
-                                    .Select(g => g.Key) 
-                                    .OrderByDescending(x => x) 
-                                    .Take(8)
-                                    .ToListAsync();
-            var productosDestacadosIds = productosVendidos;
 
-            var productos = await (from p in _context.PRODUCTO
-                                   join um in _context.UMEDIDA on p.PRO_UNIDAD equals um.UMD_CODIGO
-                                   join lp in _context.DLISTAPRE on p.PRO_CODIGO equals lp.DLP_PRODUCTO
-
-                                   where p.PRO_EMPRESA == p_empresa
-                                     && p.PRO_INACTIVO != 1
-                                     && (p.PRO_CRITICO ?? 0) == 0
-                                     && (p.PRO_INACTIVO ?? 0) == 0
-                                     && lp.DLP_FECHA_INI <= fechaActual
-                                     && listaprecios.Contains(lp.DLP_LISTAPRE)
-                                     && (lp.DLP_INACTIVO ?? 0) == 0
-                                     && (lp.DLP_FECHA_FIN == null || lp.DLP_FECHA_FIN >= fechaActual)
-                                   select new
-                                   {
-                                       lp.DLP_LISTAPRE,
-                                       p.PRO_NOMBRE,
-                                       p.PRO_CODIGO,
-                                       um.UMD_ID,
-                                       p.PRO_ID,
-                                       lp.DLP_FECHA_FIN,
-                                       p.PRO_UNIDAD,
-                                       p.PRO_UNIDAD2,
-                                       p.PRO_IMPUESTO,
-                                       p.PRO_PROMOCION,
-                                       Destacado = productosDestacadosIds.Contains(p.PRO_CODIGO) || p.PRO_PROMOCION == 1
-
-                                   }).GroupBy(x => x.PRO_CODIGO)
-                                    .Select(g => g.First())
-                                    .ToListAsync();
+            var productos = (
+              from cc in _context.CCOMPROBA
+              join cd in _context.DFACTURA on cc.CCO_CODIGO equals cd.DFAC_CFAC_COMPROBA
+              join p in _context.PRODUCTO on cd.DFAC_PRODUCTO equals p.PRO_CODIGO
+              join ct in _context.CTIPOCOM on cc.CCO_SIGLA equals ct.CTI_CODIGO
+              join cl in _context.CLIENTE on cc.CCO_CODCLIPRO equals cl.CLI_CODIGO
+              join cld in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cld.CDI_CLIENTE
+              where cc.CCO_FECHA >= p_dias_lapso
+                    && cc.CCO_SIGLA == 673
+                    && cl.CLI_AGENTE == agente
+                    && cld.CDI_DIA == dayformateado
+              select new
+              {
+                  cd.DFAC_PRODUCTO,
+                  cc.CCO_CODCLIPRO
+              }
+          )
+          .AsEnumerable() // Operamos en memoria después de traer los datos
+          .GroupBy(g => g.CCO_CODCLIPRO) // Agrupamos por cliente
+          .SelectMany(g => g
+              .GroupBy(x => x.DFAC_PRODUCTO) // Agrupamos por producto dentro de cada cliente
+              .Select(productGroup => new
+              {
+                  DFAC_PRODUCTO = productGroup.Key,
+                  CCO_CODCLIPRO = g.Key,
+                  Ranking = productGroup.Count()
+              })
+              .OrderByDescending(x => x.Ranking) 
+              .Take(10)) // Tomamos los 10 primeros de cada cliente
+          .ToList(); 
 
 
 
@@ -190,7 +190,7 @@ public class ProductoService : IProductoService
 
             if (productos == null || !productos.Any())
             {
-                throw new NotFoundException("No se encontraron clientes.");
+                throw new NotFoundException("No se encontraron Productos.");
             }
 
             response.Data = productos;
@@ -213,4 +213,48 @@ public class ProductoService : IProductoService
         return response;
     }
 
+
+
+    public async Task<ServiceResponse<object>> GetDescuentosxProductoAsync(int cproducto, decimal lprecios, decimal ccliente)
+    {
+        var response = new ServiceResponse<object>();
+        DateTime _fecha = DateTime.Now;
+        DateTime fecha = _fecha.Date;
+        try
+        {
+            var des = await (from l in _context.DLISTADSC
+                             where l.DLD_PRODUCTO == cproducto && l.DLD_LISTAPRE == lprecios //&& l.DLD_CLIENTE == ccliente
+                             && l.DLD_INACTIVO == 0 && l.DLD_FECHA_INI < fecha &&  (l.DLD_FECHA_FIN == null || l.DLD_FECHA_FIN >= fecha)
+                             select l).ToListAsync();
+            
+            if (!des.Any())
+            {
+                response.Data = 0;
+                response.Success = true;
+                response.Message = FormatosTexto.DatosNoEncontrados;
+                return response;
+            }
+
+            response.Data = des;
+            response.Success = true;
+            response.Message = FormatosTexto.DatosEncontrados;
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details (ex) here as needed
+            response.Success = false;
+            response.Message = "Ocurrió un error en:" + nameof(ListaPreciosService) + ex;
+
+        }
+
+        return response;
+
+
+
+    }
 }

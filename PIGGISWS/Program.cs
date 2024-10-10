@@ -20,15 +20,15 @@ var builder = WebApplication.CreateBuilder(args);
 var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ?? builder.Configuration["MicrosoftGraph:Scopes"]?.Split(' ');
 
 ////// Add services to the container.
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
-        .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
-            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
-            .AddInMemoryTokenCaches();
+//builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+//    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
+//        .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
+//            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
+//            .AddInMemoryTokenCaches();
 
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//  .AddMicrosoftIdentityWebApi(builder.Configuration);
-//builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+  .AddMicrosoftIdentityWebApi(builder.Configuration);
+builder.Services.AddAuthorization();
 
 
 
@@ -51,7 +51,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseOracle(connectionString));
+            options.UseOracle(connectionString) );
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.EnableSensitiveDataLogging());
 
 builder.Services.AddScoped<IAgenteService, AgenteService>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
@@ -60,7 +62,9 @@ builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IUbicacionService, UbicacionService>();
 builder.Services.AddScoped<IListaPreciosService, ListaPreciosService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddHttpClient<FirebaseNotificationService>();
+builder.Services.AddScoped<IFirebaseNotificationService ,FirebaseNotificationService>();
+builder.Services.AddScoped<IRuteroService, RuteroService>();
+builder.Services.AddHostedService<FcmMessageBackgroundService>();
 
 
 // Configurar logging
@@ -77,7 +81,7 @@ app.UseCors(options =>
     .AllowAnyHeader())
     ;
 
-// Inicialización de FirebaseApp
+// InicializaciÃ³n de FirebaseApp
 //FirebaseApp.Create(new AppOptions()
 //{
 //    Credential = GoogleCredential.FromFile("path/to/serviceAccountKey.json"),

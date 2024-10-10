@@ -30,4 +30,20 @@ public class MensajeriaController : ControllerBase
         return BadRequest(response.Message);
 
     }
+
+
+
+    [HttpPost("SendALLFcmMessageAsync")]
+    public async Task<IActionResult> SendALLFcmMessageAsync()
+    {
+
+        var response = await _firebaseService.SendALLFcmMessageAsync();
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+        return BadRequest(response.Message);
+
+    }
 }
