@@ -25,7 +25,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Bodega> BODEGA { get; set; }
     public DbSet<UsrBod> USRBOD { get; set; }
-    public DbSet <Usuario> USUARIO { get; set; }
+    public DbSet<Usuario> USUARIO { get; set; }
     public DbSet<Planifica_Revision> PLANIFICA_REVISION { get; set; }
 
     public DbSet<Planifica_Revision_Det> PLANIFICA_REVISION_DET { get; set; }
@@ -68,14 +68,31 @@ public class ApplicationDbContext : DbContext
     public DbSet<Notificaciones> NOTIFICACIONES { get; set; }
     public DbSet<Notificaciones_Grupos> NOTIFICACIONES_GRUPOS { get; set; }
     public DbSet<Fcm_Token> FCM_TOKEN { get; set; }
-    public DbSet<Dtipocom> DTIPOCOM {  get; set; }
+    public DbSet<Dtipocom> DTIPOCOM { get; set; }
     public DbSet<Sistema> SISTEMA { get; set; }
-    public DbSet<Impuesto> IMPUESTO {  get; set; }
+    public DbSet<Impuesto> IMPUESTO { get; set; }
     public DbSet<Totali> TOTALI { get; set; }
     public DbSet<DListadsc> DLISTADSC { get; set; }
     public DbSet<Rutero> RUTERO { get; set; }
     public DbSet<AgentePedidoCalendario> AGENTE_CALENDARIO_PEDIDO { get; set; }
+    public DbSet<Cartera> CARTERA { get; set; }
+    public DbSet<DDocumento> DDOCUMENTO { get; set; }
+
+    public DbSet<Total> TOTAL { get; set; }
+
+    public DbSet<DMovInvi> DMOVINVI { get; set; }
+
+    public DbSet<TipoDev> TIPODEV { get; set; }
     public DbSet<NextVal> NEXVAL { get; set; }
+
+    public DbSet<Rep_Referencias_Dev_Info1> REP_REFERENCIAS_DEV_INFO1 { get; set; }  
+
+    public DbSet<Lst_Productos_Apr_Ncc> LST_PRODUCTOS_APR_NCC { get; set; }
+
+    public DbSet<Vl_Ncc_Idc_ldv> VL_NCC_IDC_LDV { get; set; }
+
+
+    public DbSet<Cmovinv> CMOVINV { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -101,7 +118,7 @@ public class ApplicationDbContext : DbContext
          .HasKey(p => new { p.POL_EMPRESA, p.POL_CODIGO });
 
         modelBuilder.Entity<Parametros_Movil>()
-       .HasKey(pa => new { pa.CODIGO});
+       .HasKey(pa => new { pa.CODIGO });
 
         modelBuilder.Entity<Vw_Insepector_Calidad>().ToTable("VW_INSEPECTOR_CALIDAD").HasKey(c => c.ID); // trae las vistas de la BD
 
@@ -109,7 +126,9 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Vl_Nomina_Centro_Costo>().ToTable("VL_NOMINA_CENTRO_COSTO").HasKey(c => c.CODIGO_CENTRO_COSTO);
 
-
+        modelBuilder.Entity<Rep_Referencias_Dev_Info1>().ToTable("REP_REFERENCIAS_DEV_INFO1").HasKey(c => c.CMO_REFERENCIA);
+        modelBuilder.Entity<Vl_Ncc_Idc_ldv>().ToTable("VL_NCC_IDC_LDV").HasKey(a => new { a.ID_EMPRESA_NR, a.TOTAL_NOTA_CREDITO, a.NUMERO_NOTA_CREDITO, a.NUMERO_IDC, a.NUMERO_FACTURA, a.NUMERO_LDV });
+        modelBuilder.Entity<Lst_Productos_Apr_Ncc>().ToTable("LST_PRODUCTOS_APR_NCC").HasKey(a => new { a.CCO_EMPRESA, a.CCO_CODIGO, a.ID, a.VALOR });
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
 
@@ -149,7 +168,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Ubicacion>()
           .HasKey(u => new { u.UBI_CODIGO, u.UBI_EMPRESA });
         modelBuilder.Entity<Canton>()
-         .HasKey(u => new { u.ID_CANTON_PK});
+         .HasKey(u => new { u.ID_CANTON_PK });
 
         modelBuilder.Entity<Zona>()
         .HasKey(u => new { u.ZON_CODIGO, u.ZON_EMPRESA });
@@ -159,7 +178,7 @@ public class ApplicationDbContext : DbContext
        .HasKey(u => new { u.TES_CODIGO, u.TES_EMPRESA });
 
         modelBuilder.Entity<ListaPre>()
-       .HasKey(u => new { u.LPR_CODIGO , u.LPR_EMPRESA });
+       .HasKey(u => new { u.LPR_CODIGO, u.LPR_EMPRESA });
 
         modelBuilder.Entity<Precio_Agente>()
       .HasKey(u => new { u.ID_EMPRESA_FK, u.ID_PRECIO_AGENTE_PK });
@@ -173,7 +192,7 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Notificaciones_Grupos>()
      .HasKey(u => new { u.NOT_EMPRESA, u.NOT_NOT_CODIGO });
-       
+
         modelBuilder.Entity<Fcm_Token>()
      .HasKey(u => new { u.FCM_CODIGO });
 
@@ -191,14 +210,35 @@ public class ApplicationDbContext : DbContext
   .HasKey(u => new { u.TOT_CCO_COMPROBA });
 
         modelBuilder.Entity<DListadsc>()
- .HasKey(u => new { u.DLD_CODIGO });
+                    .HasKey(u => new { u.DLD_CODIGO });
 
         modelBuilder.Entity<Rutero>()
- .HasKey(u => new { u.RUT_EMPRESA, u.RUT_CLIENTE, u.RUT_AGENTE });
+                    .HasKey(u => new { u.RUT_EMPRESA, u.RUT_CLIENTE, u.RUT_AGENTE, u.RUT_FECHA });
+
+        modelBuilder.Entity<Cmovinv>()
+                    .HasKey(u => new { u.CMO_EMPRESA, u.CMO_CCO_COMPROBA });
+
+        modelBuilder.Entity<Total>()
+                    .HasKey(u => new { u.TOT_EMPRESA, u.TOT_CCO_COMPROBA });
 
 
         modelBuilder.Entity<AgentePedidoCalendario>()
         .HasKey(u => new { u.AGE_ID_CALENDARIO_PK });
+
+        modelBuilder.Entity<Cartera>()
+        .HasKey(u => new { u.CRT_PAGO, u.CRT_DOCTRAN, u.CRT_TRANSACC, u.CRT_DDO_COMPROBA, u.CRT_FECHA, u.CRT_EMPRESA });
+
+
+        modelBuilder.Entity<DDocumento>()
+       .HasKey(u => new { u.DDO_PAGO, u.DDO_DOCTRAN, u.DDO_TRANSACC, u.DDO_CCO_COMPROBA, u.DDO_EMPRESA });
+
+        modelBuilder.Entity<TipoDev>()
+      .HasKey(u => new { u.TDE_EMPRESA, u.TDE_CODIGO });
+
+
+        modelBuilder.Entity<DMovInvi>()
+     .HasKey(u => new { u.DMO_EMPRESA, u.DMO_CMO_COMPROBA });
+
 
         modelBuilder.Entity<NextVal>()
  .HasKey(u => new { u.NextVl });
@@ -207,5 +247,5 @@ public class ApplicationDbContext : DbContext
     }
 }
 
-  
+
 

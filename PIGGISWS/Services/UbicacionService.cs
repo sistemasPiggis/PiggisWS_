@@ -213,7 +213,7 @@ public class UbicacionService :IUbicacionService
                           where z.ZON_EMPRESA == p_empresa
                           && idsCantones.Contains(z.ZON_CANTON_FK)
                           && z.ZON_ID.Length >= 4
-                          && z.ZON_CANTON_FK != null
+                          && z.ZON_CANTON_FK >0
                           select new 
                           {
                               ZON_NOMBRE = z.ZON_NOMBRE,

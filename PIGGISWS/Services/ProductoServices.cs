@@ -16,11 +16,11 @@ public class ProductoService : IProductoService
     List<Producto> Productos = new List<Producto>();
 
     int p_empresa = 0;
-    int p_cli_Tipo = 0;
+    //int p_cli_Tipo = 0;
     //int p_cli_Bloqueo = 0;
     int p_cli_Inactivo = 0;
-    int p_cli_cupo = 0;
-    string p_cli_estado = "";
+    //int p_cli_cupo = 0;
+    //string p_cli_estado = "";
     public ProductoService(ApplicationDbContext context)
     {
         _context = context;
@@ -131,8 +131,8 @@ public class ProductoService : IProductoService
         var fechaActual = DateTime.Today;
         var p_dias_lapso = DateTime.Now.AddDays(-90);
         var siglas = new List<int> { 673 }; 
-        long clienteId = 750398940;
-        int estadoExcluido = 9;
+        //long clienteId = 750398940;
+        //int estadoExcluido = 9;
         System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
 
         // Crea un objeto CultureInfo en español
@@ -150,7 +150,7 @@ public class ProductoService : IProductoService
 
 
 
-            var productos = (
+            var productos =  (
               from cc in _context.CCOMPROBA
               join cd in _context.DFACTURA on cc.CCO_CODIGO equals cd.DFAC_CFAC_COMPROBA
               join p in _context.PRODUCTO on cd.DFAC_PRODUCTO equals p.PRO_CODIGO

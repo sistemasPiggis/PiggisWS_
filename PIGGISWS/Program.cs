@@ -64,6 +64,7 @@ builder.Services.AddScoped<IListaPreciosService, ListaPreciosService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFirebaseNotificationService ,FirebaseNotificationService>();
 builder.Services.AddScoped<IRuteroService, RuteroService>();
+builder.Services.AddScoped<ICarteraService, CarteraService>();
 builder.Services.AddHostedService<FcmMessageBackgroundService>();
 
 

@@ -26,11 +26,11 @@ public class DFacturai
     public int DFAC_GRABAIVA {  get; set; } 
     public decimal DFAC_UDIGITADA { get; set; }
     public decimal DFAC_CDIGITADA { get; set; }
-    public decimal DFAC_CEQ {  get; set; }
-    public int DFAC_UEQ { get; set; }
+    public decimal? DFAC_CEQ {  get; set; }
+    public int? DFAC_UEQ { get; set; }
     public int DFAC_PROMOCION { get; set; }
     public decimal DFAC_CANT_PEDIDA { get; set; }
-    public Decimal DFAC_CAPRDIGITADA { get; set; }
+    public decimal? DFAC_CAPRDIGITADA { get; set; }
 
     [NotMapped]
     public int DFAC_ESTADO {  get; set; }

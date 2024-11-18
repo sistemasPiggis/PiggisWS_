@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PIGGISWS.Interfaces;
+using PIGGISWS.Models;
 using PIGGISWS.Models.DTOs;
 using PIGGISWS.Services;
 
@@ -36,5 +37,24 @@ public class RuteroController : Controller
 
         return BadRequest(response.Message);
     }
+
+
+    [Authorize]
+    [HttpPost("SetVisitaAsync")]
+
+    public async Task<IActionResult> SetVisitaAsync(Rutero rutero)
+    {
+
+        var response = await _ruteroService.SetVisitaAsync(rutero);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
 
 }

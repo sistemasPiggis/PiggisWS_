@@ -4,7 +4,6 @@ using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Services.Utils;
 using System.Globalization;
-
 namespace PIGGISWS.Services;
 
 public class RuteroService : IRuteroService
@@ -36,14 +35,21 @@ public class RuteroService : IRuteroService
     public async Task<ServiceResponse<object>> SetRuteroPedidoAsync(decimal cliente, int agente, DateTime fecha, decimal zona)
     {
         var response = new ServiceResponse<object>();
-        var ruteros = await _context.RUTERO.Where(r => r.RUT_CLIENTE == cliente && r.RUT_AGENTE == agente && r.RUT_FECHA == fecha).ToListAsync();
+        var startOfDay = fecha.Date; // Inicio del día actual
+        var endOfDay = fecha.Date.AddDays(1);
+        var ruteros = await _context.RUTERO
+                         .Where(r => r.RUT_CLIENTE == cliente
+                                      && r.RUT_AGENTE == agente
+                                      && r.RUT_FECHA >= startOfDay
+                                      && r.RUT_FECHA < endOfDay)
+                         .ToListAsync();
         var rutero = ruteros.FirstOrDefault();
         if ( rutero is null)
         {
             var _rutero = new Rutero
             {
                 RUT_EMPRESA = p_empresa,
-                RUT_FECHA = fecha,
+                RUT_FECHA = fecha.Date,
                 RUT_AGENTE = agente,
                 RUT_CLIENTE = cliente,
                 RUT_ZONA = zona,
@@ -68,8 +74,11 @@ public class RuteroService : IRuteroService
         }
         else
         {
-            rutero.RUT_PEDIDO = 1; // Ejemplo: si quieres incrementar el valor
-            rutero.RUT_VISITA = 1; // Ejemplo: si quieres incrementar el valor
+            _context.Attach(rutero);
+            rutero.RUT_PEDIDO = 1; // Aquí puedes ajustar cómo deseas modificar el valor.
+            rutero.RUT_VISITA = 1; // Aquí puedes ajustar cómo deseas modificar el valor.
+
+            _context.Entry(rutero).State = EntityState.Modified;
             int ruteroUpdate = await _context.SaveChangesAsync();
 
             if (ruteroUpdate > 0)
@@ -94,7 +103,8 @@ public class RuteroService : IRuteroService
     {
         var response = new ServiceResponse<object>();
         System.DayOfWeek dayOfWeek = fecha.DayOfWeek;
-        TimeSpan horapedido = fecha.TimeOfDay;
+        TimeSpan _horapedido = fecha.TimeOfDay;
+        TimeSpan horapedido = new TimeSpan(_horapedido.Hours, _horapedido.Minutes, 0);
         CultureInfo ci = new CultureInfo("es-ES");
 
         // Obtiene el nombre del día de la semana en español
@@ -143,5 +153,80 @@ public class RuteroService : IRuteroService
 
     }
 
+    public async Task<ServiceResponse<object>> SetVisitaAsync(Rutero rutero)
+    {
+        var response = new ServiceResponse<object>();
+        //DateTime hoy = DateTime.Now;
+        try
+        {
+            int agente = rutero.RUT_AGENTE;
+            decimal cliente = rutero.RUT_CLIENTE;
+            decimal zona = rutero.RUT_ZONA;
+            DateTime hoy  = rutero.RUT_FECHA;
+            var startOfDay = hoy.Date; // Inicio del día actual
+            var endOfDay = hoy.Date.AddDays(1);
+            if (agente != 0 && cliente > 0)
+            {
+                var clientes = await _context.CLIENTE.Where(r => r.CLI_CODIGO == cliente).ToListAsync();
+                var _cliente = clientes.FirstOrDefault();
+                var ruteros = await _context.RUTERO
+                         .Where(r => r.RUT_CLIENTE == cliente
+                                      && r.RUT_AGENTE == agente
+                                      && r.RUT_FECHA >= startOfDay
+                                      && r.RUT_FECHA < endOfDay)
+                         .ToListAsync();
+                var _rutero = ruteros.FirstOrDefault();
+                if (_cliente != null)
+                {
+                    if (_rutero == null)
+                    {
+                        var rutero_ = new Rutero
+                        {
+                            RUT_AGENTE = agente,
+                            RUT_CLIENTE = cliente,
+                            RUT_EMPRESA = 1,
+                            RUT_FECHA = hoy.Date,
+                            RUT_VISITA = 1,
+                            RUT_ZONA = zona
+                        };
 
+                       await _context.RUTERO.AddAsync(rutero_);
+                       int ruterosave = await _context.SaveChangesAsync();
+                        if (ruterosave > 0)
+                        {
+                            
+                            response.Success = true;
+                            response.Message = "VISITA REGISTRADA EXISTOSAMENTE";
+                            response.Data = rutero_;
+                        }
+                        else
+                        {
+                            response.Success = true;
+                            response.Message = "ERROR AL GRABAR VISITA";
+                            response.Data = rutero_;
+                        }
+                    }
+                    else
+                    {
+                       response.Success = true;
+                       response.Message = "YA SE REGISTRO PEDIDO, COBRO O VISITA";
+                       response.Data = null;
+                    }
+                }
+            }
+            else
+            {
+                response.Success = true;
+                response.Message = "NO SE TIENEN DATOS DE CLIENTE VERIFICAR DATOS";
+                response.Data = null;
+            }
+        }
+        catch (Exception ex)
+        { 
+            response.Success = true;
+            response.Message = ex.Message;
+            response.Data = ex;
+        }
+            return response;
+    }
 }

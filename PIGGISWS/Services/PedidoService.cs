@@ -17,8 +17,8 @@ public class PedidoService : IPedidoService
     private readonly IProductoService _productoService;
     private readonly IRuteroService _ruteroService;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
-    
 
+    #region Prop
     int p_empresa;
     //int p_cli_Tipo = 0;
     //int p_cli_Bloqueo = 0;
@@ -57,7 +57,7 @@ public class PedidoService : IPedidoService
     int p_pedd_estado;
     int p_pedd_totimpuesto;
     int p_ped_cfac_orden;
-
+    #endregion
     public PedidoService(ApplicationDbContext context, IProductoService productoService, IRuteroService ruteroService)
     {
         _productoService = productoService;
@@ -123,8 +123,6 @@ public class PedidoService : IPedidoService
         {
 
 
-
-
             var pedidos = await (from cc in _context.CCOMPROBA
                                  join df in _context.DFACTURA on cc.CCO_CODIGO equals df.DFAC_CFAC_COMPROBA
                                  join ct in _context.CTIPOCOM on cc.CCO_SIGLA equals ct.CTI_CODIGO
@@ -133,23 +131,25 @@ public class PedidoService : IPedidoService
                                  && siglapedidod.Contains(cc.CCO_SIGLA)
                                  && cc.CCO_FECHA >= p_fecha_pedido
                                  && cc.CCO_CODCLIPRO == cliente
-                                 group new { cc, df } by new { cc.CCO_NUMERO, cc.CCO_FECHA, ct.CTI_NOMBRE, cc.CCO_DETALLE, cc.CCO_CODIGO, cc.CCO_DIA, cc.CCO_PERIODO, cc.CCO_CIE_COMPROBA, cc.CCO_AGENTE, cc.CCO_MES } into g
+                                 group new { cc, df } by new { cc.CCO_NUMERO, cc.CCO_FECHA, ct.CTI_NOMBRE, cc.CCO_DETALLE, //cc.CCO_CODIGO, 
+                                     cc.CCO_DIA, cc.CCO_PERIODO, cc.CCO_CIE_COMPROBA, cc.CCO_AGENTE, cc.CCO_MES 
+                                 } into g
                                  select new
                                  {
                                      CCO_NUMERO = g.Key.CCO_NUMERO,
                                      CCO_FECHA = g.Key.CCO_FECHA,
                                      CTI_NOMBRE = g.Key.CTI_NOMBRE,
-                                     CCO_CODIGO = Convert.ToString(g.Key.CCO_CODIGO),
+                                     //CCO_CODIGO = g.Key.CCO_CODIGO,
                                      DFAC_CANTIDAD = g.Sum(x => x.df.DFAC_CANTIDAD),
                                      DFAC_TOTAL = g.Sum(x => x.df.DFAC_TOTAL),
                                      CCO_DETALLE = g.Key.CCO_DETALLE,
                                      CCO_DIA = g.Key.CCO_DIA,
                                      CCO_PERIODO = g.Key.CCO_PERIODO,
                                      CCO_MES = g.Key.CCO_MES,
-                                     CCO_CIE_COMPROBA = g.Key.CCO_CIE_COMPROBA,
+                                     //CCO_CIE_COMPROBA = g.Key.CCO_CIE_COMPROBA,
                                      CCO_AGENTE = g.Key.CCO_AGENTE
                                  }
-                                ).ToListAsync();
+                                ).OrderByDescending(o=>o.CCO_FECHA).ToListAsync();
 
 
 
@@ -379,7 +379,7 @@ public class PedidoService : IPedidoService
         int mes = DateTime.Now.Month;
         int dia = DateTime.Now.Day;
         DateTime _fecha = DateTime.Now;
-        DateTime fecha = _fecha.Date;
+        DateTime fecha = auxNuevoPedidos.Ccomprobai.CCO_FECHA;
         decimal cco_codigo = 0;
 
         int e = p_empresa;
@@ -473,8 +473,8 @@ public class PedidoService : IPedidoService
                         CFAC_TIPOPAGO = p_ped_tipopago,
                         CFAC_COMISION = p_ped_comision,
                         CFAC_IMPRIMIO = p_ped_imprimio, 
-                        CFAC_ORDEN = p_ped_cfac_orden,
-                        CFAC_PEDIDO = p_ped_cfac_orden
+                        //CFAC_ORDEN = null, //p_ped_cfac_orden,
+                        //CFAC_PEDIDO =  p_ped_cfac_orden
 
                     };
                     await _context.CCOMFACI.AddAsync(ccomfaci);
@@ -506,7 +506,7 @@ public class PedidoService : IPedidoService
                                 DFAC_TOTAL = await GetTotalPrecioAsync(lprecio, auxint.DFAC_PRODUCTO ?? 0, auxint.DFAC_CANTIDAD),
                                 DFAC_CANENT = auxint.DFAC_CANENT,
                                 DFAC_CANDEV = p_pedd_candev,
-                                DFAC_CANRES = auxint.DFAC_CANRES,
+                                //DFAC_CANRES = auxint.DFAC_CANRES,
                                 DFAC_DSCITEM = p_pedd_dscitem,
                                 DFAC_COMBO = p_pedd_combo,
                                 DFAC_IVAITEM = p_pedd_ivaitem,
@@ -514,11 +514,12 @@ public class PedidoService : IPedidoService
                                 DFAC_UDIGITADA = auxint.DFAC_UDIGITADA,
                                 DFAC_CDIGITADA = auxint.DFAC_CANTIDAD,
                                 
-                                //DFAC_CEQ = auxint.DFAC_CEQ,
-                                //DFAC_UEQ = auxint.DFAC_UEQ,
+                                DFAC_CEQ = null,
+                                DFAC_UEQ = null,
                                 DFAC_CANT_PEDIDA = auxint.DFAC_CANT_PEDIDA,
-                                DFAC_PROMOCION = auxint.DFAC_PROMOCION
-                                //DFAC_ESTADO = p_pedd_estado
+                                DFAC_PROMOCION = auxint.DFAC_PROMOCION,
+                                DFAC_ESTADO = p_pedd_estado,
+                                DFAC_CAPRDIGITADA = null
                             };
                             listadfactura.Add(dfaturai);
                         }
@@ -531,7 +532,7 @@ public class PedidoService : IPedidoService
                                 TOT_EMPRESA = p_empresa,
                                 TOT_CCO_COMPROBA = ccomprobai.CCO_CODIGO,
                                 TOT_IMPUESTO = p_pedd_totimpuesto,
-                                TOT_PORC_DESC = _politica?.POL_PORC_FINANC,
+                                TOT_PORC_DESC = _politica?.POL_PORC_DESC,
                                 TOT_PORC_FINANC = _politica?.POL_PORC_FINANC,
                                 TOT_PORC_PRO_PAGO = _politica?.POL_PORC_PRO_PAGO,
                                 TOT_PORC_PAG_CONTA = _politica?.POL_PORC_PAG_CONTA,
@@ -555,7 +556,7 @@ public class PedidoService : IPedidoService
                             await _context.TOTALI.AddAsync(totali);
                             int totalisave = await _context.SaveChangesAsync();
                             if (totalisave != 0)
-                            await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0);
+                            await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0); /// registra en el rito visita y pedido
                             await transaction.CommitAsync();
                         }
                         else
@@ -617,7 +618,13 @@ public class PedidoService : IPedidoService
 
         decimal pprecio = _pprecio.FirstOrDefault();
 
-        return Math.Round(pprecio,2);
+        if (pprecio > 0.01m)
+        {
+            return Math.Round(pprecio, 2);
+        }
+        else
+            return pprecio;
+        
     }
 
     public async Task<decimal> GetTotalPrecioAsync(decimal lprecio, int cproducto, decimal cdigitada)

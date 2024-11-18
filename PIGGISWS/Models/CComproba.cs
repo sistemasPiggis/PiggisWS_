@@ -6,7 +6,7 @@ public class CComproba
 {
     public int CCO_EMPRESA {  get; set; }
 
-    public long CCO_CODIGO { get; set;}
+    public decimal CCO_CODIGO { get; set;}
     public DateTime CCO_FECHA { get; set;}
     public int CCO_SIGLA {  get; set;}
     public decimal CCO_CODCLIPRO { get; set;}

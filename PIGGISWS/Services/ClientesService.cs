@@ -219,8 +219,8 @@ public class ClientesService : IClientesService
                     listaClientesDia.Add(nuevoClienteDia);
                 }
 
-                _context.CLIENTE_DIA_GESTION_NUEVO.AddRange(listaClientesDia);
-                _context.SaveChanges();
+                 _context.CLIENTE_DIA_GESTION_NUEVO.AddRange(listaClientesDia);
+                await _context.SaveChangesAsync();
 
 
                 response.Message = "Registro creado exitosamente";
