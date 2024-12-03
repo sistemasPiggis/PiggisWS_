@@ -53,13 +53,13 @@ public class FireBaseService
         {
 
 
-            var hoy = DateTime.Today.AddDays(-1);
+            var hoy = DateTime.Today.AddDays(-4);
             var oneWeekAgo = DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeMilliseconds();
             var marcaciones = (await _firebaseClient
                         .Child("marcaciones")
                         .OrderBy("Fecha")
                         
-                        .LimitToLast(50000)
+                        .LimitToLast(500000)
                         .OnceAsync<Marcacion>())
                         .Select(item => new Marcacion
                         {
@@ -138,6 +138,7 @@ public class FireBaseService
                                 {
                                     // El agente existe y ENTRADA1_MOVIL es null - se actualiza
                                     marcacionAgente.ENTRADA1_MOVIL = marcacion.Entrada1;
+                                    marcacionAgente.ENTRADA1 = marcacion.Entrada1;
                                     marcacionAgente.UBICACION1 = marcacion.Ubicacion;
                                     _context.TMP_MARCACION_AGENTE.Update(marcacionAgente);
                                     _logger.LogInformation($"Actualizado AGE_CODIGO: {marcacionAgente.AGE_CODIGO}, ENTRADA1_MOVIL: {marcacionAgente.ENTRADA1_MOVIL}, UBICACION1: {marcacionAgente.UBICACION1}, MAR_FECHA: {marcacionAgente.MAR_FECHA}");
@@ -187,6 +188,7 @@ public class FireBaseService
                                 {
                                     // El agente existe y SALIDA1 es null - se actualiza
                                     marcacionAgente.SALIDA1_MOVIL = marcacion.Salida1;
+                                    marcacionAgente.SALIDA1 = marcacion.Salida1;
                                     marcacionAgente.UBICACION2 = marcacion.Ubicacion;
                                     _context.TMP_MARCACION_AGENTE.Update(marcacionAgente);
                                     _logger.LogInformation($"Actualizado AGE_CODIGO: {marcacionAgente.AGE_CODIGO}, " +
@@ -240,6 +242,7 @@ public class FireBaseService
                                 {
                                     // El agente existe y SALIDA1 es null - se actualiza
                                     marcacionAgente.ENTRADA2_MOVIL = marcacion.Entrada2;
+                                    marcacionAgente.ENTRADA2 = marcacion.Entrada2;
                                     marcacionAgente.UBICACION3 = marcacion.Ubicacion;
                                     _context.TMP_MARCACION_AGENTE.Update(marcacionAgente);
                                     _logger.LogInformation($"Actualizado AGE_CODIGO: {marcacionAgente.AGE_CODIGO}, " +
@@ -293,7 +296,8 @@ public class FireBaseService
                                 if (marcacionAgente.SALIDA2_MOVIL == null)
                                 {
                                     // El agente existe y SALIDA1 es null - se actualiza
-                                    marcacionAgente.SALIDA2_MOVIL = marcacion.Salida1;
+                                    marcacionAgente.SALIDA2_MOVIL = marcacion.Salida2;
+                                    marcacionAgente.SALIDA2 = marcacion.Salida2;
                                     marcacionAgente.UBICACION3 = marcacion.Ubicacion;
                                     _context.TMP_MARCACION_AGENTE.Update(marcacionAgente);
                                     _logger.LogInformation($"Actualizado AGE_CODIGO: {marcacionAgente.AGE_CODIGO}, " +

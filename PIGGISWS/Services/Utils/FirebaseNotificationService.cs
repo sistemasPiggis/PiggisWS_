@@ -22,7 +22,7 @@ public class FirebaseNotificationService: IFirebaseNotificationService
 
 
     private readonly ApplicationDbContext _context;
-    
+    private const string FirebaseServerKey = "AAAA47TFP4g:APA91bGASDjXVLGZpGqRdMDAvLGna-tLziR1imYaKsLfQhTa75Zpw79c2qB-seXvBF05dIQ1y23JmLEy3oeTHyjKfC59HrbzekjOsqfB-7W7osr05OYmuDeuu4bwnuhY0QS6y7dGvJ-b";
     private const string FcmUrl = "https://fcm.googleapis.com/v1/projects/977990401928/messages:send";
     private readonly HttpClient _httpClient;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
