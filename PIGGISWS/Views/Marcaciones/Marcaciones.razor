@@ -1,0 +1,45 @@
+﻿@page "/marcaciones"
+@using PIGGISWS.Models.Firebase
+@inject HttpClient Http
+
+<h3>Marcaciones</h3>
+
+<table class="table table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>Id</th>
+            <th>Fecha</th>
+            <th>Agente</th>
+            <th>Ubicación</th>
+            <th>Entrada1</th>
+            <th>Salida1</th>
+            <th>Entrada2</th>
+            <th>Salida2</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var marcacion in marcaciones)
+        {
+            <tr>
+                <td>@marcacion.Id</td>
+                <td>@marcacion.Fecha</td>
+                <td>@marcacion.age_codigo</td>
+                <td>@marcacion.Ubicacion</td>
+                <td>@marcacion.Entrada1</td>
+                <td>@marcacion.Salida1</td>
+                <td>@marcacion.Entrada2</td>
+                <td>@marcacion.Salida2</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Marcacion> marcaciones = new List<Marcacion>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        marcaciones = await Http.GetFromJsonAsync<List<Marcacion>>("api/marcaciones");
+    }
+}
+

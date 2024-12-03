@@ -67,8 +67,7 @@ builder.Services.AddScoped<IRuteroService, RuteroService>();
 builder.Services.AddScoped<ICarteraService, CarteraService>();
 builder.Services.AddHostedService<FcmMessageBackgroundService>();
 builder.Services.AddScoped<IDevolucionesService, DevolucionesService>();
-
-
+builder.Services.AddScoped<FireBaseService>();
 // Configurar logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(); // Para loggear en la consola

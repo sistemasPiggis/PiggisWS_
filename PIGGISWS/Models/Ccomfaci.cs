@@ -28,7 +28,7 @@ public class Ccomfaci
     public int? CFAC_TIPOPAGO { get; set; }
     public int? CFAC_COMISION { get; set; }
     public int? CFAC_IMPRIMIO { get; set; }
-    public long? CFAC_CIUDAD {  get; set; }
+    public decimal? CFAC_CIUDAD {  get; set; }
     //public int CFAC_ORDEN { get; set; }
     //public int CFAC_PEDIDO { get; set;  }
 }

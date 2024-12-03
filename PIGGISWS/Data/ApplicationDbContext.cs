@@ -93,7 +93,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rep_Ventas_Int_60> REP_VENTAS_INT_60 { get; set; }
 
     public DbSet<Rep_Motivos_Dev> REP_MOTIVOS_DEV { get; set; }
-    public DbSet<Cmovinv> CMOVINV { get; set; }
+    public DbSet<Cmovinv> CMOVINV { get; set; } 
+    public DbSet<Tmp_Marcacion_Agente> TMP_MARCACION_AGENTE { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -240,6 +241,9 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<TipoDev>()
       .HasKey(u => new { u.TDE_EMPRESA, u.TDE_CODIGO });
+
+        modelBuilder.Entity<Tmp_Marcacion_Agente>()
+      .HasKey(u => new { u.ID_MARCACION, u.ID_EMPRESA });
 
 
         modelBuilder.Entity<DMovInvi>()
