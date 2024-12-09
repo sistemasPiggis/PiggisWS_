@@ -22,5 +22,5 @@ public class Tmp_Marcacion_Agente
     public string? UBICACION3 { get; set; } = string.Empty;
     public string? UBICACION4 { get; set; } = string.Empty;
 
-
+    public DateTime? MOD_FECHA { get; set; }
 }

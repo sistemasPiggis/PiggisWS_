@@ -556,7 +556,7 @@ public class PedidoService : IPedidoService
                             await _context.TOTALI.AddAsync(totali);
                             int totalisave = await _context.SaveChangesAsync();
                             if (totalisave != 0)
-                            await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0); /// registra en el rito visita y pedido
+                            await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0); /// registra en el rutero visita y pedido
                             await transaction.CommitAsync();
                         }
                         else
@@ -594,7 +594,7 @@ public class PedidoService : IPedidoService
         {
           
             response.Data = auxNuevoPedidos;
-            response.Success = true;
+            response.Success = false;
             response.Message = "Existió un problema por favor vuelva a intentarlo." + ex.ToString();
             return response;
         }

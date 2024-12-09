@@ -85,7 +85,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<TipoDev> TIPODEV { get; set; }
     public DbSet<NextVal> NEXVAL { get; set; }
 
-    public DbSet<Rep_Referencias_Dev_Info1> REP_REFERENCIAS_DEV_INFO1 { get; set; }  
+    public DbSet<Rep_Referencias_Dev_Info1> REP_REFERENCIAS_DEV_INFO1 { get; set; }
 
     public DbSet<Lst_Productos_Apr_Ncc> LST_PRODUCTOS_APR_NCC { get; set; }
 
@@ -93,8 +93,13 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rep_Ventas_Int_60> REP_VENTAS_INT_60 { get; set; }
 
     public DbSet<Rep_Motivos_Dev> REP_MOTIVOS_DEV { get; set; }
-    public DbSet<Cmovinv> CMOVINV { get; set; } 
+    public DbSet<Cmovinv> CMOVINV { get; set; }
     public DbSet<Tmp_Marcacion_Agente> TMP_MARCACION_AGENTE { get; set; }
+
+    public DbSet<Devolucion_Cab> DEVOLUCION_CAB { get; set; }
+    public DbSet<Devolucion_Det> DEVOLUCION_DET { get; set; }
+    public DbSet<Devolucion_Ext> DEVOLUCION_EXT { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -133,9 +138,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Lst_Productos_Apr_Ncc>().ToTable("LST_PRODUCTOS_APR_NCC").HasKey(a => new { a.CCO_EMPRESA, a.CCO_CODIGO, a.ID, a.VALOR });
 
         modelBuilder.Entity<Rep_Ventas_Int_60>().ToTable("REP_VENTAS_INT_60").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO, a.UMD_ID });
-        modelBuilder.Entity<Rep_Motivos_Dev>().ToTable("REP_MOTIVOS_DEV").HasKey(a => new { a.TDE_CODIGO});
+        modelBuilder.Entity<Rep_Motivos_Dev>().ToTable("REP_MOTIVOS_DEV").HasKey(a => new { a.TDE_CODIGO });
 
-        
+
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
 
@@ -247,11 +252,24 @@ public class ApplicationDbContext : DbContext
 
 
         modelBuilder.Entity<DMovInvi>()
-     .HasKey(u => new { u.DMO_EMPRESA, u.DMO_CMO_COMPROBA });
+         .HasKey(u => new { u.DMO_EMPRESA, u.DMO_CMO_COMPROBA });
+
+
+        modelBuilder.Entity<Devolucion_Cab>()
+        .HasKey(u => new { u.DEV_CODIGO });
+
+        modelBuilder.Entity<Devolucion_Det>()
+        .HasKey(u => new { u.DVD_CODIGO });
+
+        modelBuilder.Entity<Devolucion_Cab>()
+        .HasKey(u => new { u.DEV_CODIGO });
+
+        modelBuilder.Entity<Devolucion_Ext>()
+        .HasKey(u => new { u.DEV_CODIGO, u.DEV_EMPRESA });
 
 
         modelBuilder.Entity<NextVal>()
- .HasKey(u => new { u.NextVl });
+     .HasKey(u => new { u.NextVl });
 
 
     }

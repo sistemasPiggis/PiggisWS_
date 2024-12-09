@@ -21,6 +21,9 @@ namespace PIGGISWS.Services.Utils
             var notificationsTask = ExecuteNotificationsAsync(stoppingToken);
 
             await Task.WhenAll(marcacionesTask, notificationsTask);
+
+
+            //await Task.WhenAll(notificationsTask);
         }
         private async Task ExecuteMarcacionesAsync(CancellationToken stoppingToken)
         {
@@ -43,7 +46,7 @@ namespace PIGGISWS.Services.Utils
 
 
                 // Espera 30 horas (108000000 ms)
-                await Task.Delay(TimeSpan.FromHours(4), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
         }
 
