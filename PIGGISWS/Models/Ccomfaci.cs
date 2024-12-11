@@ -10,7 +10,7 @@ public class Ccomfaci
     public int CFAC_EMPRESA {  get; set; }
     public decimal CFAC_CCO_COMPROBA { get; set; }
     public int? CFAC_AUTORIZA { get; set; }
-    public long? CFAC_POLITICA { get; set; }
+    public decimal? CFAC_POLITICA { get; set; }
     public decimal? CFAC_LISTA_PRECIOS { get; set; }
     public int? CFAC_EST_ENTREGA { get; set; }
     public int? CFAC_PROC_FAC {  get; set; }

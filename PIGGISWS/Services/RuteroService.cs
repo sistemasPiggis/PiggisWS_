@@ -32,7 +32,7 @@ public class RuteroService : IRuteroService
         }
     }
 
-    public async Task<ServiceResponse<object>> SetRuteroPedidoAsync(decimal cliente, int agente, DateTime fecha, decimal zona)
+    public async Task<ServiceResponse<object>> SetRuteroPedidoAsync(decimal cliente, decimal agente, DateTime fecha, decimal zona)
     {
         var response = new ServiceResponse<object>();
         var startOfDay = fecha.Date; // Inicio del día actual
@@ -99,7 +99,7 @@ public class RuteroService : IRuteroService
     }
 
 
-    public async Task<ServiceResponse<object>> ValidaHoraPedidoAsync(int agente, DateTime fecha)
+    public async Task<ServiceResponse<object>> ValidaHoraPedidoAsync(decimal agente, DateTime fecha)
     {
         var response = new ServiceResponse<object>();
         System.DayOfWeek dayOfWeek = fecha.DayOfWeek;
@@ -159,7 +159,7 @@ public class RuteroService : IRuteroService
         //DateTime hoy = DateTime.Now;
         try
         {
-            int agente = rutero.RUT_AGENTE;
+            decimal agente = rutero.RUT_AGENTE;
             decimal cliente = rutero.RUT_CLIENTE;
             decimal zona = rutero.RUT_ZONA;
             DateTime hoy  = rutero.RUT_FECHA;
