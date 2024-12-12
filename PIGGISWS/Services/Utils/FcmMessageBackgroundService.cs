@@ -17,13 +17,13 @@ namespace PIGGISWS.Services.Utils
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var marcacionesTask = ExecuteMarcacionesAsync(stoppingToken);
+            //var marcacionesTask = ExecuteMarcacionesAsync(stoppingToken);
             var notificationsTask = ExecuteNotificationsAsync(stoppingToken);
 
-            await Task.WhenAll(marcacionesTask, notificationsTask);
+            //await Task.WhenAll(marcacionesTask, notificationsTask);
 
 
-            //await Task.WhenAll(notificationsTask);
+            await Task.WhenAll(notificationsTask);
         }
         private async Task ExecuteMarcacionesAsync(CancellationToken stoppingToken)
         {
