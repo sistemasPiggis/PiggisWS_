@@ -33,7 +33,7 @@ public class Cliente
 
     public long? CLI_LISTAPRE { get; set; }
     public int? CLI_ILIMITADO { get; set; }
-    public string? CLI_DIA { get; set; } = string.Empty;
+    //public string? CLI_DIA { get; set; } = string.Empty;
     public long? CLI_POLITICAS { get; set; }
     public int? CLI_BLOQUEO { get; set; }
     public int? CLI_TIPO { get; set; }

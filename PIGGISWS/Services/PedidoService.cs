@@ -603,7 +603,7 @@ public class PedidoService : IPedidoService
 
    
 
-    public async Task<decimal> GetPrecioAsync(decimal lprecio, int cproducto)
+    public async Task<decimal> GetPrecioAsync(decimal lprecio, decimal cproducto)
     {
         var fechaActual = DateTime.Today;
         DateTime d = fechaActual.Date;
@@ -627,7 +627,7 @@ public class PedidoService : IPedidoService
         
     }
 
-    public async Task<decimal> GetTotalPrecioAsync(decimal lprecio, int cproducto, decimal cdigitada)
+    public async Task<decimal> GetTotalPrecioAsync(decimal lprecio, decimal cproducto, decimal cdigitada)
     {
         var fechaActual = DateTime.Today;
         DateTime d = fechaActual.Date;

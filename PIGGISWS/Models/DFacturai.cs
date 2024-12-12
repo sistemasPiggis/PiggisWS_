@@ -8,7 +8,7 @@ public class DFacturai
     public int DFAC_EMPRESA {  get; set; }
     public decimal DFAC_CFAC_COMPROBA { get; set; }
     public int DFAC_SECUENCIA { get; set; }
-    public int? DFAC_PRODUCTO { get; set; }
+    public decimal? DFAC_PRODUCTO { get; set; }
     public decimal?  DFAC_CATPRODUCTO { get; set; }
     public decimal  DFAC_CANTIDAD {  get; set; } 
     public decimal  DFAC_CANAPR {  get; set; } 

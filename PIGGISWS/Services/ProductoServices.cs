@@ -215,7 +215,7 @@ public class ProductoService : IProductoService
 
 
 
-    public async Task<ServiceResponse<object>> GetDescuentosxProductoAsync(int cproducto, decimal lprecios, decimal ccliente)
+    public async Task<ServiceResponse<object>> GetDescuentosxProductoAsync(decimal cproducto, decimal lprecios, decimal ccliente)
     {
         var response = new ServiceResponse<object>();
         DateTime _fecha = DateTime.Now;
