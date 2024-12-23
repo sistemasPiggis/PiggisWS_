@@ -8,4 +8,5 @@ public class Rep_Ventas_Int_60
     public string PRO_NOMBRE { get; set; } = string.Empty;
     public string UMD_CODIGO { get; set; } = string.Empty;
     public string UMD_ID { get; set; } = string.Empty;
+    public decimal PRO_CANTIDAD { get; set; }
 }

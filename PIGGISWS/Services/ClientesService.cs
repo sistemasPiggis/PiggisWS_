@@ -35,7 +35,7 @@ public class ClientesService : IClientesService
     public ClientesService(ApplicationDbContext context, IEmailService emailService)
     {
         _context = context;
-       
+       P_CLI_NOT_MAILS = string.Empty;
         _emailService = emailService;
         GetParametros();
     }

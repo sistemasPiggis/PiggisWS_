@@ -26,7 +26,7 @@ public class CComprobai
     public decimal CCO_TIPO_CAMBIO { get; set; }
     public int? CCO_TCLIPRO { get; set; }
     public decimal CCO_CODCLIPRO { get; set; }
-    public int? CCO_AGENTE { get; set; }
+    public decimal? CCO_AGENTE { get; set; }
     public int? CCO_TRANSACC {  get; set; }
     public int CCO_ANULADO { get; set; }
     public int CCO_BODEGA { get; set; }

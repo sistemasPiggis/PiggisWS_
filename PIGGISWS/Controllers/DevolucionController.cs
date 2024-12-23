@@ -28,8 +28,7 @@ public class DevolucionController : ControllerBase
     [Authorize]
     [HttpPost("GetProDevxClienteAgeAsync")]
 
-    public async Task<IActionResult> GetCarteraXFacturaAsync([FromBody] Cliente cliente
-        )
+    public async Task<IActionResult> GetCarteraXFacturaAsync([FromBody] Cliente cliente)
     {
         var response = await _devolucionesService.GetProDevxClienteAgeAsync(cliente);
 

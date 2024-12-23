@@ -329,7 +329,8 @@ public class CarteraService : ICarteraService
                         {
                             var hoy = DateTime.Today;
                             var ruteros = await _context.RUTERO
-                                .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
+                                .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date 
+                                && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
 
                             var rutero = ruteros.FirstOrDefault();
                             if (rutero != null)

@@ -1,9 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Azure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Models.Auxiliares;
 using PIGGISWS.Models.DTOs;
+using static Google.Apis.Requests.BatchRequest;
 
 namespace PIGGISWS.Services;
 
@@ -11,6 +14,7 @@ public class DevolucionesService : IDevolucionesService
 {
 
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<DevolucionesService> _logger;
     ServiceResponse<object> respuesta = new ServiceResponse<object>();
 
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
@@ -18,9 +22,10 @@ public class DevolucionesService : IDevolucionesService
     int p_car_siglafac;
     decimal CRT_NUMERO;
 
-    public DevolucionesService(ApplicationDbContext context)
+    public DevolucionesService(ApplicationDbContext context, ILogger<DevolucionesService> logger)
     {
         _context = context;
+        _logger = logger;
         GetParametros();
     }
 
@@ -124,5 +129,148 @@ public class DevolucionesService : IDevolucionesService
         return response;
     }
 
+    public async Task<bool> ValidaDevolucion(Devolucion_Ext dev)
+    {
+        try
+        {
+            var result = await _context.DEVOLUCION_EXT.Where(d => d.DEV_SECUENCIAL_MOVIL == dev.DEV_SECUENCIAL_MOVIL &&
+                                 d.DEV_REFERENCIA_UNICA_TX == dev.DEV_REFERENCIA_UNICA_TX).FirstOrDefaultAsync();
+            if (result != null)
+            {
+                return true;
+            }
+            _logger.LogWarning("La devolución ya existe: " + dev.DEV_CODIGO + dev.DEV_REFERENCIA_UNICA_TX);
+            return false;
+        }
 
+        catch (Exception ex)
+        {
+            _logger.LogWarning("exite un error al validar la devolucion: " + ex.ToString());
+            return false;
+        }
+    }
+
+    public async Task<ServiceResponse<object>> CreateDevolucionAsync(Devolucion_Ext devext, Devolucion_Cab devcab, List<Devolucion_Det> devolucion_Dets)
+    {
+        decimal dev_codigo = 0;
+        
+        if (await ValidaDevolucion(devext))
+        {
+            respuesta.Success = false;
+            respuesta.Message = "La devolución ya existe";
+            return respuesta;
+        }
+        else
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    using (var command = _context.Database.GetDbConnection().CreateCommand())
+                    {
+                        command.CommandText = "SELECT DEVOLUCION_S_CODIGO.NEXTVAL FROM dual";
+                        await _context.Database.OpenConnectionAsync();
+
+                        var result = await command.ExecuteScalarAsync();
+                        dev_codigo = Convert.ToDecimal(result);
+                    }
+
+                    var Ndev_ext = new Devolucion_Ext
+                    {
+                        DEV_CODIGO = dev_codigo,
+                        DEV_EMPRESA = p_empresa,
+                        DEV_REFERENCIA_UNICA_TX = devext.DEV_REFERENCIA_UNICA_TX,
+                        DEV_SECUENCIAL_MOVIL = devext.DEV_SECUENCIAL_MOVIL,
+                        DEV_LATITUD_NR = devext.DEV_LATITUD_NR,
+                        DEV_LONGITUD_NR = devext.DEV_LONGITUD_NR,
+                        DEV_FECHA_CREACION_ORG_DT = devext.DEV_FECHA_CREACION_ORG_DT
+                    };
+                    await _context.DEVOLUCION_EXT.AddAsync(Ndev_ext);
+                    int extsave = await _context.SaveChangesAsync();
+                    if (extsave == 0)
+                    {
+                        transaction.Rollback();
+                        respuesta.Data = null;
+                        respuesta.Success = false;
+                        respuesta.Message = "ERROR AL GUARDAR DEVOLUCION_EXT";
+                        _logger.LogError("Error al guardar en DEVOLUCION_EXT: {DEV_CODIGO}", dev_codigo);
+                        return respuesta;
+                    }
+                    _logger.LogInformation("Guardado en DEVOLUCION_EXT: {DEV_CODIGO}", dev_codigo);
+                    var NDev_cabecera = new Devolucion_Cab
+                    {
+                        DEV_NUMERO = devcab.DEV_NUMERO,
+                        DEV_CLIENTE = devcab.DEV_CLIENTE,
+                        DEV_AGENTE = devcab.DEV_AGENTE,
+                        DEV_FECHA = devcab.DEV_FECHA,
+                        DEV_OBSERVACION = devcab.DEV_OBSERVACION,
+                        DEV_NUM_FUNDAS = devcab.DEV_NUM_FUNDAS,
+                        DEV_IMPRESO = devcab.DEV_IMPRESO,
+                        DEV_DOC_REFERENCIA = devcab.DEV_DOC_REFERENCIA,
+                        DEV_ESTADO = devcab.DEV_ESTADO,
+                        DEV_OBSERVACION_VALIDADOR = devcab.DEV_OBSERVACION_VALIDADOR
+                    };
+                    await _context.DEVOLUCION_CAB.AddAsync(NDev_cabecera);
+                    int cabsave = await _context.SaveChangesAsync();
+                    if (cabsave == 0)
+                    {
+
+                        transaction.Rollback();
+                        respuesta.Data = null;
+                        respuesta.Success = false;
+                        respuesta.Message = "ERROR AL GUARDAR DEVOLUCION CABECERA.";
+                        _logger.LogError("Error al guardar en DEVOLUCION_CAB: {DEV_CODIGO}", dev_codigo);
+                        return respuesta;
+
+                    }
+                    _logger.LogInformation("Guardado en DEVOLUCION_CAB: {DEV_CODIGO}", dev_codigo);
+                    foreach (var item in devolucion_Dets)
+                    {
+                        var NDev_detalle = new Devolucion_Det
+                        {
+                            DVD_CODIGO = dev_codigo,
+                            DVD_PRODUCTO = item.DVD_PRODUCTO,
+                            DVD_UNIDAD = item.DVD_UNIDAD,
+                            DVD_CANTIDAD = item.DVD_CANTIDAD,
+                            DVD_REFERENCIA = item.DVD_REFERENCIA,
+                            DVD_FACTURA = item.DVD_FACTURA,
+                            DVD_PROCESA = item.DVD_PROCESA,
+                            DVD_OBSERVACION = item.DVD_OBSERVACION,
+                            DVD_MOTIVO = item.DVD_MOTIVO,
+                            DVD_SECUENCIA = item.DVD_SECUENCIA,
+                            DVD_CARGADO_DESDE = item.DVD_CARGADO_DESDE,
+                            DVD_ESTADO = item.DVD_ESTADO
+                        };
+                        await _context.DEVOLUCION_DET.AddAsync(NDev_detalle);
+                    }
+                    int detsave = await _context.SaveChangesAsync();
+                    if (detsave == 0)
+                    {
+                        transaction.Rollback();
+                        respuesta.Data = null;
+                        respuesta.Success = false;
+                        respuesta.Message = "EXISTIO UN PROBLEMA AL GUARDAR DEVOLUCION DETALLE";
+                        _logger.LogError("Error al guardar en DEVOLUCION_DET: {DEV_CODIGO}", dev_codigo);
+                        return respuesta;
+                    }
+
+                    await transaction.CommitAsync();
+                    respuesta.Data = new { NDev_cabecera };
+                    respuesta.Success = true;
+                    respuesta.Message = "Pedido guardado exitosamente # de pedido = " + NDev_cabecera.DEV_NUMERO;
+                    _logger.LogInformation("Transacción completada exitosamente: {DEV_CODIGO}", dev_codigo);
+                    return respuesta;
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    respuesta.Data = null;
+                    respuesta.Success = false;
+                    respuesta.Message = ex.ToString();
+                    _logger.LogError("Error al guardar devolucion:" + ex.ToString() );
+                    return respuesta;
+                }
+            }
+        }
+    }
 }
