@@ -17,13 +17,13 @@ namespace PIGGISWS.Services.Utils
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //var marcacionesTask = ExecuteMarcacionesAsync(stoppingToken);
+            var marcacionesTask = ExecuteMarcacionesAsync(stoppingToken);
             var notificationsTask = ExecuteNotificationsAsync(stoppingToken);
 
-            //await Task.WhenAll(marcacionesTask, notificationsTask);
+            await Task.WhenAll(marcacionesTask, notificationsTask);
 
 
-            await Task.WhenAll(notificationsTask);
+            //await Task.WhenAll(notificationsTask);
         }
         private async Task ExecuteMarcacionesAsync(CancellationToken stoppingToken)
         {
@@ -46,7 +46,7 @@ namespace PIGGISWS.Services.Utils
 
 
                 // Espera 30 horas (108000000 ms)
-                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
             }
         }
 
@@ -71,7 +71,7 @@ namespace PIGGISWS.Services.Utils
                 }
 
                 // Espera 10 minutos (600000 ms)
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
     }

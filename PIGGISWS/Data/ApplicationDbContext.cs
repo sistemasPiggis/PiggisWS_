@@ -259,7 +259,7 @@ public class ApplicationDbContext : DbContext
         .HasKey(u => new { u.DEV_CODIGO });
 
         modelBuilder.Entity<Devolucion_Det>()
-        .HasKey(u => new { u.DVD_CODIGO });
+        .HasKey(u => new { u.DVD_CODIGO, u.DVD_PRODUCTO, u.DVD_SECUENCIA });
 
         modelBuilder.Entity<Devolucion_Cab>()
         .HasKey(u => new { u.DEV_CODIGO });

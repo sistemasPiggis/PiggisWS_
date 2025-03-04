@@ -26,6 +26,8 @@ var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ??
 //            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
 //            .AddInMemoryTokenCaches();
 
+
+// AMBIENTE PRODUCCIÓN
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddMicrosoftIdentityWebApi(builder.Configuration);
 builder.Services.AddAuthorization();

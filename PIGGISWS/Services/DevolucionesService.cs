@@ -21,6 +21,7 @@ public class DevolucionesService : IDevolucionesService
     int p_empresa;
     int p_car_siglafac;
     decimal CRT_NUMERO;
+    string p_estado_dev ="";
 
     public DevolucionesService(ApplicationDbContext context, ILogger<DevolucionesService> logger)
     {
@@ -36,7 +37,7 @@ public class DevolucionesService : IDevolucionesService
             parametros = _context.PARAMETROS_MOVIL.Where(p => p.SERVICIO == "DevolucionesService" || p.SERVICIO == "GENERAL").ToList();
             p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
             p_car_siglafac = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 55)?.VALOR ?? "0");
-
+            p_estado_dev = parametros.FirstOrDefault(p => p.CODIGO == 56)?.VALOR ?? "G";
         }
         catch (Exception ex)
         {
@@ -150,11 +151,19 @@ public class DevolucionesService : IDevolucionesService
         }
     }
 
-    public async Task<ServiceResponse<object>> CreateDevolucionAsync(Devolucion_Ext devext, Devolucion_Cab devcab, List<Devolucion_Det> devolucion_Dets)
+    public async Task<ServiceResponse<object>> CreateDevolucionAsync(AuxDevolucion auxDevolucion)
     {
         decimal dev_codigo = 0;
         
-        if (await ValidaDevolucion(devext))
+        if (auxDevolucion == null || auxDevolucion.Ext == null || auxDevolucion.Cabecera == null || auxDevolucion.Detalle == null)
+        {
+            respuesta.Data = null;
+            respuesta.Success = false;
+            respuesta.Message = "No todos los datos estan completos";
+            _logger.LogError("Error al guardar devolucion: No todos los datos estan completos");
+            return respuesta;
+        }
+        if (await ValidaDevolucion(auxDevolucion.Ext))
         {
             respuesta.Success = false;
             respuesta.Message = "La devolución ya existe";
@@ -179,11 +188,11 @@ public class DevolucionesService : IDevolucionesService
                     {
                         DEV_CODIGO = dev_codigo,
                         DEV_EMPRESA = p_empresa,
-                        DEV_REFERENCIA_UNICA_TX = devext.DEV_REFERENCIA_UNICA_TX,
-                        DEV_SECUENCIAL_MOVIL = devext.DEV_SECUENCIAL_MOVIL,
-                        DEV_LATITUD_NR = devext.DEV_LATITUD_NR,
-                        DEV_LONGITUD_NR = devext.DEV_LONGITUD_NR,
-                        DEV_FECHA_CREACION_ORG_DT = devext.DEV_FECHA_CREACION_ORG_DT
+                        DEV_REFERENCIA_UNICA_TX = auxDevolucion.Ext.DEV_REFERENCIA_UNICA_TX,
+                        DEV_SECUENCIAL_MOVIL =  dev_codigo,
+                        DEV_LATITUD_NR = auxDevolucion.Ext.DEV_LATITUD_NR,
+                        DEV_LONGITUD_NR = auxDevolucion.Ext.DEV_LONGITUD_NR,
+                        DEV_FECHA_CREACION_ORG_DT = auxDevolucion.Ext.DEV_FECHA_CREACION_ORG_DT
                     };
                     await _context.DEVOLUCION_EXT.AddAsync(Ndev_ext);
                     int extsave = await _context.SaveChangesAsync();
@@ -199,16 +208,16 @@ public class DevolucionesService : IDevolucionesService
                     _logger.LogInformation("Guardado en DEVOLUCION_EXT: {DEV_CODIGO}", dev_codigo);
                     var NDev_cabecera = new Devolucion_Cab
                     {
-                        DEV_NUMERO = devcab.DEV_NUMERO,
-                        DEV_CLIENTE = devcab.DEV_CLIENTE,
-                        DEV_AGENTE = devcab.DEV_AGENTE,
-                        DEV_FECHA = devcab.DEV_FECHA,
-                        DEV_OBSERVACION = devcab.DEV_OBSERVACION,
-                        DEV_NUM_FUNDAS = devcab.DEV_NUM_FUNDAS,
-                        DEV_IMPRESO = devcab.DEV_IMPRESO,
-                        DEV_DOC_REFERENCIA = devcab.DEV_DOC_REFERENCIA,
-                        DEV_ESTADO = devcab.DEV_ESTADO,
-                        DEV_OBSERVACION_VALIDADOR = devcab.DEV_OBSERVACION_VALIDADOR
+                        DEV_CODIGO = dev_codigo,
+                        DEV_NUMERO = auxDevolucion.Cabecera.DEV_AGENTE + Ndev_ext.DEV_CODIGO,
+                        DEV_CLIENTE = auxDevolucion.Cabecera.DEV_CLIENTE,
+                        DEV_AGENTE = auxDevolucion.Cabecera.DEV_AGENTE,
+                        DEV_FECHA = auxDevolucion.Cabecera.DEV_FECHA,
+                        DEV_OBSERVACION = auxDevolucion.Cabecera.DEV_OBSERVACION,
+                        DEV_NUM_FUNDAS = auxDevolucion.Cabecera.DEV_NUM_FUNDAS,
+                        DEV_IMPRESO = 0,
+                        DEV_ESTADO = p_estado_dev,
+
                     };
                     await _context.DEVOLUCION_CAB.AddAsync(NDev_cabecera);
                     int cabsave = await _context.SaveChangesAsync();
@@ -224,11 +233,11 @@ public class DevolucionesService : IDevolucionesService
 
                     }
                     _logger.LogInformation("Guardado en DEVOLUCION_CAB: {DEV_CODIGO}", dev_codigo);
-                    foreach (var item in devolucion_Dets)
+                    foreach (var item in auxDevolucion.Detalle!)
                     {
                         var NDev_detalle = new Devolucion_Det
                         {
-                            DVD_CODIGO = dev_codigo,
+                            DVD_CODIGO = NDev_cabecera.DEV_CODIGO,
                             DVD_PRODUCTO = item.DVD_PRODUCTO,
                             DVD_UNIDAD = item.DVD_UNIDAD,
                             DVD_CANTIDAD = item.DVD_CANTIDAD,
@@ -255,9 +264,15 @@ public class DevolucionesService : IDevolucionesService
                     }
 
                     await transaction.CommitAsync();
-                    respuesta.Data = new { NDev_cabecera };
+                    AuxDevolucion respauxdev = new AuxDevolucion
+                    {
+                        Cabecera = NDev_cabecera,
+                        Detalle = null,
+                        Ext = null
+                    };
+                    respuesta.Data =  respauxdev ;
                     respuesta.Success = true;
-                    respuesta.Message = "Pedido guardado exitosamente # de pedido = " + NDev_cabecera.DEV_NUMERO;
+                    respuesta.Message = "Pedido guardado exitosamente # de DEVOLUCION = " + respauxdev.Cabecera.DEV_NUMERO;
                     _logger.LogInformation("Transacción completada exitosamente: {DEV_CODIGO}", dev_codigo);
                     return respuesta;
                 }
@@ -267,7 +282,7 @@ public class DevolucionesService : IDevolucionesService
                     respuesta.Data = null;
                     respuesta.Success = false;
                     respuesta.Message = ex.ToString();
-                    _logger.LogError("Error al guardar devolucion:" + ex.ToString() );
+                    _logger.LogError("ERROR AL GUARDAR DEVOLUCION: " + ex.ToString() );
                     return respuesta;
                 }
             }

@@ -569,7 +569,7 @@ public class PedidoService : IPedidoService
 
                         }
                         //await transaction.CommitAsync();
-                        response.Data = new { ccomprobai.CCO_CODIGO, ccomfaci.CFAC_CCO_COMPROBA };
+                        response.Data = new { ccomprobai, listadfactura };
                         response.Success = true;
                         response.Message = "Pedido guardado Existosamente # de pedido = " + ccomprobai.CCO_CODIGO;
                         return response;

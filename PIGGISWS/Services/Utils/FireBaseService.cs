@@ -59,7 +59,7 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
             var marcaciones = (await _firebaseClient
                         .Child("marcaciones")
                         .OrderBy("Fecha")
-                        .LimitToLast(90000)
+                        .LimitToLast(900000000)
                         .OnceAsync<Marcacion>())
                         .Select(item => new Marcacion
                         {
