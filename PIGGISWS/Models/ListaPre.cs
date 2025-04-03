@@ -11,5 +11,5 @@ public class ListaPre
     public int? LPR_MONEDA { get; set; }
     public int? LPR_INACTIVO { get; set; }
     public int? LPR_NUMERO {  get; set; }
-    public DateTime? DLP_FECHA_INI { get; set; }
+    //public DateTime? DLP_FECHA_INI { get; set; }
 }

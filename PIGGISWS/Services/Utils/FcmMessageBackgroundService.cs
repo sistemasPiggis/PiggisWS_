@@ -23,7 +23,7 @@ namespace PIGGISWS.Services.Utils
             await Task.WhenAll(marcacionesTask, notificationsTask);
 
 
-            //await Task.WhenAll(notificationsTask);
+ 
         }
         private async Task ExecuteMarcacionesAsync(CancellationToken stoppingToken)
         {

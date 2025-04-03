@@ -14,15 +14,13 @@ namespace PIGGISWS.Controllers;
 public class DevolucionController : ControllerBase
 {
     // GET: DevolucionesController
-    private readonly ApplicationDbContext _context;
     private readonly IDevolucionesService _devolucionesService;
     private readonly ILogger<PedidoController> _logger;
     // GET: Clienteprivate readonly ApplicationDbContext _context;
-    ModelResponse model = new ModelResponse();
+    //ModelResponse model = new ModelResponse();
 
-    public DevolucionController(ApplicationDbContext context, IDevolucionesService devolucionesService, ILogger<PedidoController> logger)
+    public DevolucionController( IDevolucionesService devolucionesService, ILogger<PedidoController> logger)
     {
-        _context = context;
         _devolucionesService = devolucionesService;
         _logger = logger;
     }

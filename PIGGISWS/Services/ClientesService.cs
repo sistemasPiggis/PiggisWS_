@@ -118,7 +118,7 @@ public class ClientesService : IClientesService
 
             if (clientes == null || !clientes.Any())
             {
-                throw new NotFoundException("No se encontraron clientes.");
+               response.Message = FormatosTexto.DatosNoEncontrados;
             }
 
             response.Data = clientes;

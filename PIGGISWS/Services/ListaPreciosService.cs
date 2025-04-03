@@ -39,7 +39,7 @@ public class ListaPreciosService: IListaPreciosService
         {
             var listasp = await (from l in _context.LISTAPRE 
                                  join la in _context.PRECIO_AGENTE on l.LPR_CODIGO equals la.ID_PRECIO_FK
-                                 where la.ID_AGENTE_FK == agente
+                                 where la.ID_AGENTE_FK == agente && l.LPR_INACTIVO == 0
                                  select l).ToListAsync();
 
             if (!listasp.Any())

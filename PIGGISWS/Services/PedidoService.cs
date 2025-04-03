@@ -197,7 +197,6 @@ public class PedidoService : IPedidoService
 
         try
         {
-
             var result = await (from cc in _context.CCOMPROBA
                                 join df in _context.DFACTURA on cc.CCO_CODIGO equals df.DFAC_CFAC_COMPROBA
                                 join pr in _context.PRODUCTO on df.DFAC_PRODUCTO equals pr.PRO_CODIGO
@@ -208,9 +207,9 @@ public class PedidoService : IPedidoService
                                 && cc.CCO_NUMERO == auxPedidos.Cabecera.CCO_NUMERO
                                 && cc.CCO_PERIODO == auxPedidos.Cabecera.CCO_PERIODO
                                 && cc.CCO_DIA == auxPedidos.Cabecera.CCO_DIA
-                                && cc.CCO_CIE_COMPROBA == auxPedidos.Cabecera.CCO_CIE_COMPROBA
+                                && cc.CCO_AGENTE == auxPedidos.Cabecera.CCO_AGENTE
                                 && cc.CCO_MES == auxPedidos.Cabecera.CCO_MES
-                                group new { cc, df } by new
+                                select new
                                 {
                                     cc.CCO_NUMERO,
                                     cc.CCO_FECHA,
@@ -226,21 +225,8 @@ public class PedidoService : IPedidoService
                                     df.DFAC_TOTAL,
                                     df.DFAC_SECUENCIA,
                                     pr.PRO_NOMBRE
-                                } into g
-                                select new
-                                {
-                                    CCO_NUMERO = g.Key.CCO_NUMERO,
-                                    CCO_FECHA = g.Key.CCO_FECHA,
-                                    CTI_NOMBRE = g.Key.CTI_NOMBRE,
-                                    DFAC_CANTIDAD = g.Key.DFAC_CANTIDAD,
-                                    CCO_DETALLE = g.Key.CCO_DETALLE,
-                                    DFAC_TOTAL = g.Key.DFAC_TOTAL,
-                                    DFAC_SECUENCIA = g.Key.DFAC_SECUENCIA,
-                                    PRO_NOMBRE = g.Key.PRO_NOMBRE,
+                                }).ToListAsync();
 
-
-                                }
-                    ).OrderBy(d => d.DFAC_SECUENCIA).ToListAsync();
 
             if (result == null || !result.Any())
             {
@@ -269,7 +255,7 @@ public class PedidoService : IPedidoService
                 PRO_NOMBRE = r.PRO_NOMBRE,
                 DFAC_SECUENCIA = r.DFAC_SECUENCIA,
 
-            }).ToList();
+            }).OrderBy(d =>d.DFAC_SECUENCIA).ToList();
 
             var pedido = new AuxPedido
             {
@@ -569,6 +555,7 @@ public class PedidoService : IPedidoService
 
                         }
                         //await transaction.CommitAsync();
+
                         response.Data = new { ccomprobai, listadfactura };
                         response.Success = true;
                         response.Message = "Pedido guardado Existosamente # de pedido = " + ccomprobai.CCO_CODIGO;

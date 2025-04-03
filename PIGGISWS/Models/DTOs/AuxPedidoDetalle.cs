@@ -3,7 +3,9 @@
 public class AuxCComproba
 {
     public int CCO_EMPRESA { get; set; }
-    public string CCO_CODIGO { get; set; }
+    public decimal CCO_CODIGO { get; set; } /// <summary>
+    /// 
+    /// </summary>
     public DateTime CCO_FECHA { get; set; }
     public string CTI_NOMBRE { get; set; }
     public decimal CLI_CODIGO { get; set; }

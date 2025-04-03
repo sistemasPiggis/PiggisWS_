@@ -154,7 +154,8 @@ public class DevolucionesService : IDevolucionesService
     public async Task<ServiceResponse<object>> CreateDevolucionAsync(AuxDevolucion auxDevolucion)
     {
         decimal dev_codigo = 0;
-        
+        DateTime fechadev = auxDevolucion.Cabecera?.DEV_FECHA ?? DateTime.Now;
+
         if (auxDevolucion == null || auxDevolucion.Ext == null || auxDevolucion.Cabecera == null || auxDevolucion.Detalle == null)
         {
             respuesta.Data = null;
@@ -177,22 +178,30 @@ public class DevolucionesService : IDevolucionesService
                 {
                     using (var command = _context.Database.GetDbConnection().CreateCommand())
                     {
-                        command.CommandText = "SELECT DEVOLUCION_S_CODIGO.NEXTVAL FROM dual";
+                        command.CommandText = "SELECT DATA_USR.DEVOLUCION_S_CODIGO.NEXTVAL FROM dual";
                         await _context.Database.OpenConnectionAsync();
 
                         var result = await command.ExecuteScalarAsync();
                         dev_codigo = Convert.ToDecimal(result);
                     }
 
+                    var secuenciales = await (from ext in _context.DEVOLUCION_EXT
+                                              join ca in _context.DEVOLUCION_CAB on ext.DEV_CODIGO equals ca.DEV_CODIGO
+                                              where ca.DEV_AGENTE == auxDevolucion.Cabecera.DEV_AGENTE
+                                              orderby ext.DEV_SECUENCIAL_MOVIL descending
+                                              select ext.DEV_SECUENCIAL_MOVIL).ToListAsync();
+                    decimal ultimosec = Convert.ToInt16(secuenciales.FirstOrDefault());
+                    ultimosec++;
+
                     var Ndev_ext = new Devolucion_Ext
                     {
                         DEV_CODIGO = dev_codigo,
                         DEV_EMPRESA = p_empresa,
                         DEV_REFERENCIA_UNICA_TX = auxDevolucion.Ext.DEV_REFERENCIA_UNICA_TX,
-                        DEV_SECUENCIAL_MOVIL =  dev_codigo,
+                        DEV_SECUENCIAL_MOVIL = ultimosec,
                         DEV_LATITUD_NR = auxDevolucion.Ext.DEV_LATITUD_NR,
                         DEV_LONGITUD_NR = auxDevolucion.Ext.DEV_LONGITUD_NR,
-                        DEV_FECHA_CREACION_ORG_DT = auxDevolucion.Ext.DEV_FECHA_CREACION_ORG_DT
+                        DEV_FECHA_CREACION_ORG_DT = fechadev.Date
                     };
                     await _context.DEVOLUCION_EXT.AddAsync(Ndev_ext);
                     int extsave = await _context.SaveChangesAsync();
@@ -206,13 +215,18 @@ public class DevolucionesService : IDevolucionesService
                         return respuesta;
                     }
                     _logger.LogInformation("Guardado en DEVOLUCION_EXT: {DEV_CODIGO}", dev_codigo);
+
+                    string devAgenteStr = auxDevolucion.Cabecera.DEV_AGENTE?.ToString("F0") ?? "0";
+                    string devNumeroStr = $"{devAgenteStr}{ultimosec}";
+                    decimal devNumero = Convert.ToDecimal(devNumeroStr);
+
                     var NDev_cabecera = new Devolucion_Cab
                     {
                         DEV_CODIGO = dev_codigo,
-                        DEV_NUMERO = auxDevolucion.Cabecera.DEV_AGENTE + Ndev_ext.DEV_CODIGO,
+                        DEV_NUMERO = devNumero,
                         DEV_CLIENTE = auxDevolucion.Cabecera.DEV_CLIENTE,
                         DEV_AGENTE = auxDevolucion.Cabecera.DEV_AGENTE,
-                        DEV_FECHA = auxDevolucion.Cabecera.DEV_FECHA,
+                        DEV_FECHA = fechadev.Date,
                         DEV_OBSERVACION = auxDevolucion.Cabecera.DEV_OBSERVACION,
                         DEV_NUM_FUNDAS = auxDevolucion.Cabecera.DEV_NUM_FUNDAS,
                         DEV_IMPRESO = 0,
