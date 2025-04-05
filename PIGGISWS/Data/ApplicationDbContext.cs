@@ -99,7 +99,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Devolucion_Cab> DEVOLUCION_CAB { get; set; }
     public DbSet<Devolucion_Det> DEVOLUCION_DET { get; set; }
     public DbSet<Devolucion_Ext> DEVOLUCION_EXT { get; set; }
-
+    public DbSet<Cc_Est_Perididos> CC_EST_PEDIDOS { get; set; }
+    public DbSet<Vl_Cc_Est_Pedidosq> VL_CC_EST_PEDIDOSQ { get; set; }
+    public DbSet<Rep_Lista_Prod_Ped_Internet> REP_LISTA_PROD_PED_INTERNET { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -126,7 +128,7 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Parametros_Movil>()
        .HasKey(pa => new { pa.CODIGO });
-
+        #region Vistas
         modelBuilder.Entity<Vw_Insepector_Calidad>().ToTable("VW_INSEPECTOR_CALIDAD").HasKey(c => c.ID); // trae las vistas de la BD
 
         modelBuilder.Entity<Rep_Cartera_Vencida>().ToTable("REP_CARTERA_VENCIDA").HasKey(c => c.CLI_CODIGO);
@@ -140,7 +142,10 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Rep_Ventas_Int_60>().ToTable("REP_VENTAS_INT_60").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO, a.UMD_ID });
         modelBuilder.Entity<Rep_Motivos_Dev>().ToTable("REP_MOTIVOS_DEV").HasKey(a => new { a.TDE_CODIGO });
 
-
+        modelBuilder.Entity<Cc_Est_Perididos>().ToTable("CC_EST_PEDIDOS").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });
+        modelBuilder.Entity<Vl_Cc_Est_Pedidosq>().ToTable("VL_CC_EST_PEDIDOSQ").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });
+        modelBuilder.Entity<Rep_Lista_Prod_Ped_Internet>().ToTable("REP_LISTA_PROD_PED_INTERNET").HasKey(a => new { a.PRO_CODIGO, a.DLP_LISTAPRE });
+        #endregion
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
 

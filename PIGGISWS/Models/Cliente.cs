@@ -31,7 +31,7 @@ public class Cliente
 
     public decimal ? CLI_AGENTE { get; set; } 
 
-    public long? CLI_LISTAPRE { get; set; }
+    public decimal? CLI_LISTAPRE { get; set; }
     public int? CLI_ILIMITADO { get; set; }
     //public string? CLI_DIA { get; set; } = string.Empty;
     public long? CLI_POLITICAS { get; set; }

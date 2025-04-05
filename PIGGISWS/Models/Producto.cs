@@ -18,4 +18,5 @@ public class Producto
     public decimal DLP_PRECIO { get; set; } = decimal.Zero;
     public decimal DLP_PRECIO2 { get; set; } = decimal.Zero;
     public decimal DLP_DESCUENTO { get; set; } = decimal.Zero;
+    public decimal? PRO_BODEGA { get; set; } = decimal.Zero;
 }

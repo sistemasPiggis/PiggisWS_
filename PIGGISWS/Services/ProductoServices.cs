@@ -106,7 +106,7 @@ public class ProductoService : IProductoService
 
             response.Data = productos;
             response.Success = true;
-            response.Message = "Clientes encontrados exitosamente.";
+            response.Message = "Productos encontrados exitosamente.";
         }
         catch (NotFoundException ex)
         {
@@ -117,7 +117,7 @@ public class ProductoService : IProductoService
         {
             // Log the exception details (ex) here as needed
             response.Success = false;
-            response.Message = "Ocurrió un error al obtener los clientes.";
+            response.Message = "Ocurrió un error al obtener los Productos.";
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -195,7 +195,7 @@ public class ProductoService : IProductoService
 
             response.Data = productos;
             response.Success = true;
-            response.Message = "Clientes encontrados exitosamente.";
+            response.Message = "Productos encontrados exitosamente.";
         }
         catch (NotFoundException ex)
         {

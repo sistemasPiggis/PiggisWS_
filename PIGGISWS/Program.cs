@@ -27,7 +27,7 @@ var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ??
 //            .AddInMemoryTokenCaches();
 
 
-// AMBIENTE PRODUCCIÓN
+//AMBIENTE PRODUCCIÓN
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddMicrosoftIdentityWebApi(builder.Configuration);
 builder.Services.AddAuthorization();
@@ -69,6 +69,7 @@ builder.Services.AddScoped<IRuteroService, RuteroService>();
 builder.Services.AddScoped<ICarteraService, CarteraService>();
 builder.Services.AddHostedService<FcmMessageBackgroundService>();
 builder.Services.AddScoped<IDevolucionesService, DevolucionesService>();
+builder.Services.AddScoped<IDescuentoService, DescuentoService>();
 builder.Services.AddScoped<IMarcacionService, MarcacionService>();
 builder.Services.AddScoped<FireBaseService>();
 // Configurar logging
