@@ -84,7 +84,8 @@ public class ProductoService : IProductoService
                                        p.PRO_IMPUESTO,
                                        p.PRO_PROMOCION,
                                        DESTACADO = p.PRO_PROMOCION == 1,
-                                       dl.DLP_PRECIO, 
+                                       dl.DLP_PRECIO
+                                       
                                        //lp.DLP_PRECIO2,
                                        //lp.DLP_DESCUENTO
                                    })
@@ -178,12 +179,8 @@ public class ProductoService : IProductoService
                   Ranking = productGroup.Count()
               })
               .OrderByDescending(x => x.Ranking) 
-              .Take(10)) // Tomamos los 10 primeros de cada cliente
+              .Take(30)) // Tomamos los 30 primeros de cada cliente
           .ToList(); 
-
-
-
-
 
 
 

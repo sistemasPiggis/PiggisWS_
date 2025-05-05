@@ -14,4 +14,5 @@ public class AuxDescuento
     public decimal DLD_CADACUANTOS { get; set; }
     public decimal DLD_CUANTOS { get; set; }
     public decimal DLD_FISICO { get; set; }
+    public decimal DLD_LISTAPRE { get; set; }
 }

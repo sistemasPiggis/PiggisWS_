@@ -4,8 +4,10 @@ using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Models.Auxiliares;
 using PIGGISWS.Models.DTOs;
+using PIGGISWS.Models.Vistas;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Security.Policy;
 
 namespace PIGGISWS.Services;
 
@@ -153,7 +155,7 @@ public class PedidoService : IPedidoService
 
 
 
-
+            
 
 
 
@@ -228,6 +230,36 @@ public class PedidoService : IPedidoService
                                 }).ToListAsync();
 
 
+
+            //var result = await (from v in _context.REP_CANTIDADES_PEDIDOSA
+            //                     join cc in _context.CCOMPROBA on v.CCO_CODIGO equals cc.CCO_CODIGO
+            //                     join ct in _context.CTIPOCOM on cc.CCO_SIGLA equals ct.CTI_CODIGO
+
+
+            //                     where v.CCO_NUMERO == auxPedidos.Cabecera.CCO_NUMERO
+            //                     && v.CCO_PERIODO == auxPedidos.Cabecera.CCO_PERIODO 
+            //                     && v.CCO_DIA == auxPedidos.Cabecera.CCO_DIA
+            //                     && v.CCO_MES == auxPedidos.Cabecera.CCO_MES
+            //                     && v.AGE_CODIGO == auxPedidos.Cabecera.CCO_AGENTE
+            //                     select new
+            //                     {
+            //                         cc.CCO_NUMERO,
+            //                         cc.CCO_FECHA,
+            //                         ct.CTI_NOMBRE,
+            //                         cc.CCO_DETALLE,
+            //                         cc.CCO_CODIGO,
+            //                         cc.CCO_DIA,
+            //                         cc.CCO_PERIODO,
+            //                         cc.CCO_CIE_COMPROBA,
+            //                         cc.CCO_AGENTE,
+            //                         cc.CCO_MES,
+            //                         DFAC_CANTIDAD = v.DFAC_CANTIDAD,
+            //                         DFAC_TOTAL= v.TOTAL_CON_DESCUENTOS,
+            //                         DFAC_SECUENCIA = v.DFAC_SECUENCIA,
+            //                         v.PRO_NOMBRE, v.TOTAL_KILOS
+            //                     }).ToListAsync(); 
+
+
             if (result == null || !result.Any())
             {
 
@@ -253,14 +285,15 @@ public class PedidoService : IPedidoService
                 DFAC_CANTIDAD = r.DFAC_CANTIDAD,
                 DFAC_TOTAL = r.DFAC_TOTAL,
                 PRO_NOMBRE = r.PRO_NOMBRE,
-                DFAC_SECUENCIA = r.DFAC_SECUENCIA,
+                DFAC_SECUENCIA = r.DFAC_SECUENCIA ,
 
             }).OrderBy(d =>d.DFAC_SECUENCIA).ToList();
 
             var pedido = new AuxPedido
             {
                 Cabecera = cabecera,
-                Detalles = detalles
+                Detalles = detalles,
+                //TOTAL_KILOS = result.Sum(x => x.TOTAL_KILOS)
             };
 
 
@@ -656,4 +689,147 @@ public class PedidoService : IPedidoService
 
     }
 
+
+    public async Task<ServiceResponse<object>> GetPedidosDiaxAgente(decimal agente)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+
+            var today = DateTime.Today.Date;
+
+            var pedidos = await _context.REP_CANTIDADES_PEDIDOSA
+                .Where(v => v.CCO_FECHA >= today && v.AGE_CODIGO == agente)
+                .GroupBy(v => new { v.DOC, v.CLI_NOMBRE, v.CCO_FECHA, v.AGE_CODIGO, v.FACTURA })
+                .Select(g => new
+                {
+                    DOC = g.Key.DOC,
+                    CLI_NOMBRE = g.Key.CLI_NOMBRE,
+                    CCO_FECHA = g.Key.CCO_FECHA,
+                    KILOS = g.Sum(v => v.TOTAL_KILOS),
+                    TOTAL = g.Sum(v => v.TOTAL_CON_DESCUENTOS),
+                    AGE_CODIGO = g.Key.AGE_CODIGO,
+                    FACTURA = g.Key.FACTURA,
+                    CREA_FECHA = g.Max(v => v.CREA_FECHA)
+                }).OrderBy(o =>o.CREA_FECHA)
+                .ToListAsync();
+            if (pedidos == null || !pedidos.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = Utils.FormatosTexto.DatosNoEncontrados; ;
+            }
+            else
+            {
+                response.Data = pedidos;
+                response.Success = true;
+                response.Message = Utils.FormatosTexto.DatosEncontrados;
+            }
+            return response;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los pedidos " + ex.ToString();
+            return response;
+        }
+
+    }
+
+
+
+    public async Task<ServiceResponse<object>> GetPedidosxDiaAsync(PedidosDiaRequest request) /// DEVUELVE LOS PEDIDO DE UN DÍA SELECCIONADO
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+
+            var day = request.Date;
+
+            using (var command = _context.Database.GetDbConnection().CreateCommand())
+            {
+                // Define la consulta SQL con parámetros
+                command.CommandText = @"
+                            SELECT DOC, CLI_NOMBRE, CCO_FECHA, SUM(TOTAL_KILOS) AS TOTAL_KILOS, 
+                                SUM(TOTAL_CON_DESCUENTOS) AS TOTAL_CON_DESCUENTOS, AGE_CODIGO, FACTURA, 
+                                MAX(CREA_FECHA) AS CREA_FECHA, CCO_NUMERO, CLI_CODIGO, CLI_CODIGO, CCO_PERIODO, CCO_MES, CCO_DIA, CCO_CODIGO
+                            FROM REP_CANTIDADES_PEDIDOSA
+                            WHERE TRUNC(CREA_FECHA) = :day
+                              AND AGE_CODIGO = :agente
+                            GROUP BY DOC, CLI_NOMBRE, CCO_FECHA, AGE_CODIGO, FACTURA,  CCO_NUMERO, CLI_CODIGO,  CLI_CODIGO, CCO_PERIODO, CCO_CODIGO , CCO_MES, CCO_DIA
+                            ORDER BY CREA_FECHA";
+
+                // Agrega los parámetros para evitar inyección SQL
+                //var today = DateTime.Today;
+                var agente = request.Agente;
+
+                var todayParam = command.CreateParameter();
+                todayParam.ParameterName = "day";
+                todayParam.Value = day;
+                todayParam.DbType = System.Data.DbType.Date;
+                command.Parameters.Add(todayParam);
+
+                var agenteParam = command.CreateParameter();
+                agenteParam.ParameterName = "agente";
+                agenteParam.Value = agente;
+                agenteParam.DbType = System.Data.DbType.Decimal;
+                command.Parameters.Add(agenteParam);
+
+                // Abre la conexión si no está abierta
+                if (command.Connection.State != System.Data.ConnectionState.Open)
+                {
+                    await command.Connection.OpenAsync();
+                }
+
+                // Ejecuta la consulta y procesa los resultados
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    var pedidos = new List<object>();
+
+                    while (await reader.ReadAsync())
+                    {
+                        pedidos.Add(new
+                        {
+                            DOC = reader["DOC"].ToString(),
+                            CLI_NOMBRE = reader["CLI_NOMBRE"].ToString(),
+                            CCO_FECHA = reader.GetDateTime(reader.GetOrdinal("CCO_FECHA")),
+                            TOTAL_KILOS = reader.GetDecimal(reader.GetOrdinal("TOTAL_KILOS")),
+                            TOTAL_CON_DESCUENTOS = reader.GetDecimal(reader.GetOrdinal("TOTAL_CON_DESCUENTOS")),
+                            AGE_CODIGO = reader.GetDecimal(reader.GetOrdinal("AGE_CODIGO")),
+                            FACTURA = reader["FACTURA"].ToString(),
+                            CREA_FECHA = reader.GetDateTime(reader.GetOrdinal("CREA_FECHA")),
+                            CCO_NUMERO = reader.GetDecimal(reader.GetOrdinal("CCO_NUMERO")),
+                            CLI_CODIGO = reader.GetDecimal(reader.GetOrdinal("CLI_CODIGO")),
+                            CCO_PERIODO = reader.GetInt16(reader.GetOrdinal("CCO_PERIODO")),
+                            CCO_MES = reader.GetInt16(reader.GetOrdinal("CCO_MES")),
+                            CCO_DIA=  reader.GetInt16(reader.GetOrdinal("CCO_DIA")), 
+                            CCO_CODIGO = reader.GetDecimal(reader.GetOrdinal("CCO_CODIGO"))
+                        });
+                    }
+
+                  if (pedidos == null || !pedidos.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = Utils.FormatosTexto.DatosNoEncontrados;
+                return response;
+            }
+            else
+            {
+                response.Data = pedidos;
+                response.Success = true;
+                response.Message = Utils.FormatosTexto.DatosEncontrados;
+            }  
+                }
+            }
+           
+            return response;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los pedidos " + ex.ToString();
+            return response;
+        }
+    }
 }

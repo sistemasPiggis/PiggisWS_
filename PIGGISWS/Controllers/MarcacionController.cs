@@ -73,4 +73,31 @@ public class MarcacionController : ControllerBase
         _logger.LogError("Error al consultar hora: {Message}", response.Message);
         return BadRequest(response.Message);
     }
+
+
+    [Authorize]
+    [HttpPost("GetMarcacionesxAgenteAsync")]
+    public async Task<IActionResult> GetMarcacionesxAgenteAsync([FromBody] int agente)
+    {
+        if (agente == 0)
+        {
+            _logger.LogError("El cuerpo de la solicitud está vacío.");
+            return BadRequest("El cuerpo de la solicitud no puede estar vacío.");
+        }
+
+        _logger.LogInformation("Solicitud recibida para GetMarcacionesxAgenteAsync: {@marcacion_Agente}", agente);
+
+
+        var response = await _marcacionService.GetMarcacionesxAgenteAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            _logger.LogInformation("Marcaciones enviadas exitosamente: {@Response}", response);
+            return Ok(response);
+        }
+
+        _logger.LogError("Error al recuperar marcaciones: {Message}", response.Message);
+        return BadRequest(response.Message);
+    }
 }

@@ -85,7 +85,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<TipoDev> TIPODEV { get; set; }
     public DbSet<NextVal> NEXVAL { get; set; }
 
-    public DbSet<Rep_Referencias_Dev_Info1> REP_REFERENCIAS_DEV_INFO1 { get; set; }
+    public DbSet<Rep_Referencias_Dev_Infoa> REP_REFERENCIAS_DEV_INFOA { get; set; }
 
     public DbSet<Lst_Productos_Apr_Ncc> LST_PRODUCTOS_APR_NCC { get; set; }
 
@@ -94,6 +94,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Rep_Motivos_Dev> REP_MOTIVOS_DEV { get; set; }
     public DbSet<Cmovinv> CMOVINV { get; set; }
+    public DbSet<Pre_Ventas_Anual> PRE_VENTAS_ANUAL { get; set; }
     public DbSet<Tmp_Marcacion_Agente> TMP_MARCACION_AGENTE { get; set; }
 
     public DbSet<Devolucion_Cab> DEVOLUCION_CAB { get; set; }
@@ -102,6 +103,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cc_Est_Perididos> CC_EST_PEDIDOS { get; set; }
     public DbSet<Vl_Cc_Est_Pedidosq> VL_CC_EST_PEDIDOSQ { get; set; }
     public DbSet<Rep_Lista_Prod_Ped_Internet> REP_LISTA_PROD_PED_INTERNET { get; set; }
+    public DbSet<SaldoCarteraResult> SaldoCarteraResults { get; set; }
+    public DbSet<FechaSugResult> FechaSugResults { get; set; }
+    public DbSet<Rep_Cantidades_Pedidosa> REP_CANTIDADES_PEDIDOSA { get; set; }
+    public DbSet<Rep_Cons_Cartera_Interneta> REP_CONS_CARTERA_INTERNETA { get; set; }
+    public DbSet<REP_CANTIDADES_VENTAS_2009> REP_CANTIDADES_VENTAS_2009 { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -135,7 +141,7 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Vl_Nomina_Centro_Costo>().ToTable("VL_NOMINA_CENTRO_COSTO").HasKey(c => c.CODIGO_CENTRO_COSTO);
 
-        modelBuilder.Entity<Rep_Referencias_Dev_Info1>().ToTable("REP_REFERENCIAS_DEV_INFO1").HasKey(c => c.CMO_REFERENCIA);
+        modelBuilder.Entity<Rep_Referencias_Dev_Infoa>().ToTable("REP_REFERENCIAS_DEV_INFOA").HasKey(c => c.CMO_REFERENCIA);
         modelBuilder.Entity<Vl_Ncc_Idc_ldv>().ToTable("VL_NCC_IDC_LDV").HasKey(a => new { a.ID_EMPRESA_NR, a.TOTAL_NOTA_CREDITO, a.NUMERO_NOTA_CREDITO, a.NUMERO_IDC, a.NUMERO_FACTURA, a.NUMERO_LDV });
         modelBuilder.Entity<Lst_Productos_Apr_Ncc>().ToTable("LST_PRODUCTOS_APR_NCC").HasKey(a => new { a.CCO_EMPRESA, a.CCO_CODIGO, a.ID, a.VALOR });
 
@@ -145,6 +151,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Cc_Est_Perididos>().ToTable("CC_EST_PEDIDOS").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });
         modelBuilder.Entity<Vl_Cc_Est_Pedidosq>().ToTable("VL_CC_EST_PEDIDOSQ").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });
         modelBuilder.Entity<Rep_Lista_Prod_Ped_Internet>().ToTable("REP_LISTA_PROD_PED_INTERNET").HasKey(a => new { a.PRO_CODIGO, a.DLP_LISTAPRE });
+        modelBuilder.Entity<Rep_Cantidades_Pedidosa>().ToTable("REP_CANTIDADES_PEDIDOSA").HasKey(a => new { a.DOC, a.PRO_CODIGO, a.DFAC_CANTIDAD });
+        modelBuilder.Entity<Rep_Cons_Cartera_Interneta>().ToTable("REP_CONS_CARTERA_INTERNETA").HasKey(a => new { a.DOC, a.DDO_CODCLIPRO });
+        modelBuilder.Entity<REP_CANTIDADES_VENTAS_2009>().ToTable("REP_CANTIDADES_VENTAS_2009").HasKey(a => new { a.DOC, a.PRO_NOMBRE, a.TOTAL_LIBRAS });
         #endregion
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
@@ -272,12 +281,20 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Devolucion_Ext>()
         .HasKey(u => new { u.DEV_CODIGO, u.DEV_EMPRESA });
 
+        modelBuilder.Entity<Pre_Ventas_Anual>()
+           .HasKey(a => new { a.PVA_CODIGO_PK, a.PVA_EMPRESA_FK });
+
+
 
         modelBuilder.Entity<NextVal>()
      .HasKey(u => new { u.NextVl });
 
+        modelBuilder.Entity<SaldoCarteraResult>().HasNoKey();
 
+        modelBuilder.Entity<FechaSugResult>().HasNoKey();
     }
+
+
 }
 
 

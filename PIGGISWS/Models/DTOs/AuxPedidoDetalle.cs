@@ -37,5 +37,6 @@ public class AuxDFactura
 public class AuxPedido
 {
     public AuxCComproba Cabecera { get; set; }
-    public List<AuxDFactura> Detalles { get; set; }
+    public List<AuxDFactura>? Detalles { get; set; }
+    public decimal TOTAL_KILOS { get; set; }
 }

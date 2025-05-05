@@ -137,7 +137,7 @@ public class RuteroService : IRuteroService
             {
                 response.Success = false;
                 response.Data = false;
-                response.Message = "PEDIDO INGRESARO FUERA DE HORARIO SU HORARIO ES:  "+ horaInicio +" - " + horaFin+" ";
+                response.Message = "PEDIDO INGRESARO FUERA DE HORARIO SU HORARIO ES:  "+ horaInicio +" - " + horaFin+ " + HORA DEL SERVIDO "+dayformateado+"   ";
             }
 
         }

@@ -7,11 +7,10 @@ using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Models.DTOs;
+using PIGGISWS.Models.Vistas;
 using PIGGISWS.Services.Utils;
 using System.Data;
 using System.Globalization;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
-
 namespace PIGGISWS.Services;
 
 public class CarteraService : ICarteraService
@@ -24,6 +23,7 @@ public class CarteraService : ICarteraService
     int p_empresa;
     int p_car_siglafac;
     decimal CRT_NUMERO;
+    int p_dias_anticipo;
 
     public CarteraService(ApplicationDbContext context)
     {
@@ -37,7 +37,7 @@ public class CarteraService : ICarteraService
             parametros = _context.PARAMETROS_MOVIL.Where(p => p.SERVICIO == "CarteraService" || p.SERVICIO == "GENERAL").ToList();
             p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
             p_car_siglafac = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 55)?.VALOR ?? "0");
-
+            p_dias_anticipo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 57)?.VALOR ?? "0");
         }
         catch (Exception ex)
         {
@@ -75,6 +75,7 @@ public class CarteraService : ICarteraService
                 response.Data = null;
                 response.Success = true;
                 response.Message = "NO SE ENCUENTRA DATOS PARA LOS DOCUMENTOS SELECCIONADOS";
+                return response;
             }
 
             response.Data = saldo;
@@ -92,7 +93,7 @@ public class CarteraService : ICarteraService
 
 
 
-    public async Task<ServiceResponse<object>> GetCarteraxFacturaDiaAsync(Cartera cartera) /// trae las FACTURAS de  los clientes del día de gestión
+    public async Task<ServiceResponse<object>> GetCarteraxFacturaDiaAsync(Cartera cartera) 
     {
         System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
 
@@ -128,7 +129,8 @@ public class CarteraService : ICarteraService
                                    ZON_NOMBRE = zo.ZON_NOMBRE,
                                    ///AGE_NOMBRE = a.AGE_NOMBRE
                                }
-                               ).OrderBy(c => c.CLI_NOMBRE).ToListAsync();
+                               ).OrderBy(c => c.dDocumento.DDO_FECHA_VEN )
+                                .ToListAsync();
 
 
             if (saldo == null || !saldo.Any())
@@ -136,6 +138,7 @@ public class CarteraService : ICarteraService
                 response.Data = null;
                 response.Success = true;
                 response.Message = "NO SE ENCUENTRA DATOS PARA LOS DOCUMENTOS SELECCIONADOS";
+                return response;
             }
 
             response.Data = saldo;
@@ -189,7 +192,7 @@ public class CarteraService : ICarteraService
                                    ZON_NOMBRE = zo.ZON_NOMBRE,
                                    ///AGE_NOMBRE = a.AGE_NOMBRE
                                }
-                               ).OrderBy(c => c.CLI_NOMBRE).ToListAsync();
+                               ).OrderBy(c => c.CRT_FECHA).ToListAsync();
 
 
             if (saldo == null || !saldo.Any())
@@ -197,6 +200,7 @@ public class CarteraService : ICarteraService
                 response.Data = null;
                 response.Success = true;
                 response.Message = "NO SE ENCUENTRA DATOS PARA LOS DOCUMENTOS SELECCIONADOS";
+                return response;
             }
 
             response.Data = saldo;
@@ -560,6 +564,109 @@ public class CarteraService : ICarteraService
     }
 
 
+    public async Task<ServiceResponse<object>> GetCarteraXClienteAsync(decimal Cliente)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            var deudas = await (from
+                               dd in _context.REP_CONS_CARTERA_INTERNETA
+                              
+                               select new Rep_Cons_Cartera_Interneta
+                               {
+                                   DOC = dd.DOC,
+                                   DDO_DEBCRE = dd.DDO_DEBCRE,
+                                   DDO_CODCLIPRO = dd.DDO_CODCLIPRO,
+                                   CLI_NOMBRE = dd.CLI_NOMBRE,
+                                  DDO_MONTO = dd.DDO_MONTO,
+                               DDO_FECHA_VEN = dd.DDO_FECHA_VEN,
+                               DDO_FECHA_EMI = dd.DDO_FECHA_EMI,
+                                   CANCELA = dd.CANCELA,
+                                   SALDO = dd.SALDO,
+                                   SALDOT = dd.SALDOT,
+                                   CCO_TIPODOC = dd.CCO_TIPODOC,
+                                   CCO_SIGLA = dd.CCO_SIGLA
+
+                               }
+                               ).Where(c => c.DDO_CODCLIPRO == Cliente && c.DDO_DEBCRE == 1)
+                               .OrderBy(c => c.DDO_FECHA_EMI)
+                               .ToListAsync();
+
+
+
+            if (deudas == null || !deudas.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA DEUDAS PARA EL CLIENTE SELECCIONADO";
+                return response;
+            }
+
+            response.Data = deudas;
+            response.Success = true;
+            response.Message = "DOCUMENTOS ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+        }
+        return response;
+    }
+
+
+    public async Task<ServiceResponse<object>> GetAnticiposXClienteAsync(decimal Cliente)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            var anticipos = await (from
+                               dd in _context.REP_CONS_CARTERA_INTERNETA
+
+                                select new Rep_Cons_Cartera_Interneta
+                                {
+                                    DOC = dd.DOC,
+                                    DDO_DEBCRE = dd.DDO_DEBCRE,
+                                    DDO_CODCLIPRO = dd.DDO_CODCLIPRO,
+                                    CLI_NOMBRE = dd.CLI_NOMBRE,
+                                    DDO_MONTO = dd.DDO_MONTO,
+                                    DDO_FECHA_VEN = dd.DDO_FECHA_VEN,
+                                    DDO_FECHA_EMI = dd.DDO_FECHA_EMI,
+                                    CANCELA = dd.CANCELA,
+                                    SALDO = dd.SALDO,
+                                    SALDOT = dd.SALDOT,
+                                    CCO_TIPODOC = dd.CCO_TIPODOC,
+                                    CCO_SIGLA = dd.CCO_SIGLA
+
+                                }
+                               ).Where(c => c.DDO_CODCLIPRO == Cliente && c.DDO_DEBCRE == 2 && 
+                               c.DDO_FECHA_EMI >  c.DDO_FECHA_EMI.AddDays(- p_dias_anticipo))
+                               .OrderBy(c => c.DDO_FECHA_EMI)
+                               .ToListAsync();
+
+
+
+            if (anticipos == null || !anticipos.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA ANTICIPOS PARA EL CLIENTE SELECCIONADO";
+                return response;
+            }
+
+            response.Data = anticipos;
+            response.Success = true;
+            response.Message = "DOCUMENTOS ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+        }
+        return response;
+    }
 
     #region Notas de Credito
 
@@ -568,14 +675,17 @@ public class CarteraService : ICarteraService
 
         try
         {
-            var referencias = await _context.REP_REFERENCIAS_DEV_INFO1
+            var referencias = await _context.REP_REFERENCIAS_DEV_INFOA
                             .Where(r => (r.CCO_AGENTE == agente))
                                         //r.CMO_REFERENCIA.ToUpper().Contains("AL"))
                             .Select(r => new
                             {
                                 CMO_REFERENCIA = r.CMO_REFERENCIA,
-                                CMO_CCO_COMPROBA = r.CCO_CODIGO
+                                CMO_CCO_COMPROBA = r.CCO_CODIGO,
+                                REFERENCIA = r.CMO_REFERENCIA,
+                                CLI_NOMBRE = r.CLI_NOMBRE
                             })
+                            .OrderBy(o => o.CLI_NOMBRE)
                             .ToListAsync();
 
 
@@ -584,6 +694,7 @@ public class CarteraService : ICarteraService
                 respuesta.Data = null;
                 respuesta.Success = true;
                 respuesta.Message = "NO SE ENCUENTRA DATOS PARA EL AGENTE SELECCIONADO";
+                return respuesta;
             }
 
             respuesta.Data = referencias;

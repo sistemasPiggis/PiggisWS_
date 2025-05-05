@@ -216,4 +216,37 @@ public class CarteraController : ControllerBase
     }
 
 
+    [Authorize]
+    [HttpPost("GetCarteraXClienteAsync")]
+
+    public async Task<IActionResult> GetCarteraXClienteAsync([FromBody] decimal cliente)
+    {
+        var response = await _carteraService.GetCarteraXClienteAsync(cliente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+    
+
+    [Authorize]
+    [HttpPost("GetAnticiposXClienteAsync")]
+
+    public async Task<IActionResult> GetAnticiposXClienteAsync([FromBody] decimal cliente)
+    {
+        var response = await _carteraService.GetAnticiposXClienteAsync(cliente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
 }

@@ -119,4 +119,46 @@ public class PedidoController : Controller
         _logger.LogError("Error al crear el pedido: {Message}", response.Message);
         return BadRequest(response.Message);
     }
+
+
+
+    [Authorize]
+    [HttpPost("GetPedidosDiaxAgente")]
+
+    public async Task<IActionResult> GetPedidosDiaxAgente([FromBody] decimal agente)
+    {
+
+
+
+        var response = await _pedidoservice.GetPedidosDiaxAgente(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetPedidosxDiaAsync")]
+
+    public async Task<IActionResult> GetPedidosxDiaAsync([FromBody] PedidosDiaRequest request)
+    {
+
+
+
+        var response = await _pedidoservice.GetPedidosxDiaAsync(request);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
 }

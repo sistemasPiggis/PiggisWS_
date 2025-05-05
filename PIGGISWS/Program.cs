@@ -71,6 +71,7 @@ builder.Services.AddHostedService<FcmMessageBackgroundService>();
 builder.Services.AddScoped<IDevolucionesService, DevolucionesService>();
 builder.Services.AddScoped<IDescuentoService, DescuentoService>();
 builder.Services.AddScoped<IMarcacionService, MarcacionService>();
+builder.Services.AddScoped<IPresupuestoService, PresupuestoService>();
 builder.Services.AddScoped<FireBaseService>();
 // Configurar logging
 builder.Logging.ClearProviders();

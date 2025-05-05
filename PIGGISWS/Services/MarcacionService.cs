@@ -172,4 +172,39 @@ public class MarcacionService: IMarcacionService
         }
     }
 
+
+    public async Task<ServiceResponse<object>> GetMarcacionesxAgenteAsync(int agente)
+    {
+        var response = new ServiceResponse<object>();
+        DateTime _fecha = DateTime.Now;
+        try
+        {
+            var marcaciones = await _context.TMP_MARCACION_AGENTE
+                .Where(m => m.AGE_CODIGO == agente && m.ID_EMPRESA == p_empresa && m.MAR_FECHA.Date == _fecha.Date)
+                .ToListAsync();
+            var marcacion = marcaciones.FirstOrDefault();
+            if (marcacion != null)
+                marcacion.MAR_FECHA = marcacion.MAR_FECHA.Date;
+            
+
+            if (marcacion == null)
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "No se encontraron marcaciones para el agente.";
+                return response;
+            }
+            response.Data = marcacion;
+            response.Success = true;
+            response.Message = "Marcaciones encontradas.";
+        }
+        catch (Exception ex)
+        {
+            response.Data = null;
+            response.Success = false;
+            response.Message = "Error al obtener las marcaciones: " + ex.ToString();
+        }
+        return response;
+    }
+
 }

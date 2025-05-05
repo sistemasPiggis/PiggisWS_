@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
 using Newtonsoft.Json;
+using Oracle.ManagedDataAccess.Client;
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
@@ -77,40 +78,41 @@ public class ClientesService : IClientesService
                                   where cl.CLI_EMPRESA == p_empresa
                                         && cl.CLI_TIPO == p_cli_Tipo
                                         && cl.CLI_INACTIVO == p_cli_Inactivo
-                                        && cl.CLI_BLOQUEO == p_cli_Bloqueo
+                                        //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
                                         && cl.CLI_AGENTE == agente
                                         && (cd.CDI_DIA != null && cd.CDI_DIA ==  dayformateado) 
-                                  select new
+                                  select new ClienteDto
                                   {
-                                      cl.CLI_EMPRESA,
-                                      cl.CLI_CODIGO,
-                                      cl.CLI_NOMBRE,
-                                      cl.CLI_AGENTE,
-                                      cl.CLI_ID, 
+                                      CLI_EMPRESA = cl.CLI_EMPRESA,
+                                      CLI_CODIGO = cl.CLI_CODIGO,
+                                      CLI_NOMBRE = cl.CLI_NOMBRE,
+                                      CLI_AGENTE = cl.CLI_AGENTE,
+                                      CLI_ID = cl.CLI_ID,
                                       CLI_LISTAPRE = cl.CLI_LISTAPRE ?? 0,
                                       CLI_ILIMITADOF = cl.CLI_ILIMITADO ?? 0,
                                       CLI_ZONA = cl.CLI_ZONA ?? 0,
-                                      CDI_DIA = cd != null ? cd.CDI_DIA : null,  
-                                      cl.CLI_TELEFONO1,
-                                      cl.CLI_POLITICAS,
-                                      cl.CLI_DIRECCION,
-                                      cl.CLI_DIR_ENTREGA, 
-                                      cl.CLI_NOMBRECOM,
-                                      cl.CLI_MAIL,
-                                      cl.CLI_RUC_CEDULA,
+                                      CDI_DIA = cd != null ? cd.CDI_DIA : null,
+                                      CLI_TELEFONO1 = cl.CLI_TELEFONO1,
+                                      CLI_POLITICAS = cl.CLI_POLITICAS,
+                                      CLI_DIRECCION = cl.CLI_DIRECCION,
+                                      CLI_DIR_ENTREGA = cl.CLI_DIR_ENTREGA,
+                                      CLI_NOMBRECOM = cl.CLI_NOMBRECOM,
+                                      CLI_MAIL = cl.CLI_MAIL,
+                                      CLI_RUC_CEDULA = cl.CLI_RUC_CEDULA,
                                       ID_PROVINCIA_FK = ce.ID_PROVINCIA_FK ?? 0,
-                                      ID_CANTON_FK= ce.ID_CANTON_FK ?? 0,
-                                      cl.CLI_ESTABLECIMIENTO,
-                                      p.POL_PORC_DESC,
-                                      p.POL_PORC_FINANC,
-                                      p.POL_PORC_PRO_PAGO,
-                                      p.POL_PORC_PAG_CONTA,
-                                      p.POL_LINEA_CREDITO,
-                                      p.POL_DIAS_PLAZO,
-                                      p.POL_NRO_PAGOS,
-                                      cl.CLI_PARROQUIA,
-                                      CUPO = 0,  // Asegúrate de que este valor se maneja según la lógica de negocio
-                                      DEUDA = 0  // Ídem
+                                      ID_CANTON_FK = ce.ID_CANTON_FK ?? 0,
+                                      CLI_ESTABLECIMIENTO = cl.CLI_ESTABLECIMIENTO,
+                                      POL_PORC_DESC = p.POL_PORC_DESC,
+                                      POL_PORC_FINANC = p.POL_PORC_FINANC,
+                                      POL_PORC_PRO_PAGO = p.POL_PORC_PRO_PAGO,
+                                      POL_PORC_PAG_CONTA = p.POL_PORC_PAG_CONTA,
+                                      POL_LINEA_CREDITO = p.POL_LINEA_CREDITO,
+                                      POL_DIAS_PLAZO = p.POL_DIAS_PLAZO,
+                                      POL_NRO_PAGOS = p.POL_NRO_PAGOS,
+                                      CLI_PARROQUIA = cl.CLI_PARROQUIA,
+                                      CUPO = cl.CLI_CUPO, 
+                                      CLI_BLOQUEO = cl.CLI_BLOQUEO ?? 0
+
                                   })
                  .OrderBy(x => x.CLI_NOMBRE)
                  .ToListAsync();
@@ -120,10 +122,19 @@ public class ClientesService : IClientesService
             {
                response.Message = FormatosTexto.DatosNoEncontrados;
             }
+            else
+            {
+                foreach (var cliente in clientes)
+                {
+                    cliente.DEUDA = await ObtenerDeudaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO);
+                    cliente.DISPONIBLE = (cliente.CUPO ?? 0) - (cliente.DEUDA);
+                    cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO, cliente.CLI_AGENTE ?? 0);
+                }
 
-            response.Data = clientes;
-            response.Success = true;
-            response.Message = "Clientes encontrados exitosamente.";
+                response.Data = clientes;
+                response.Success = true;
+                response.Message = "Clientes encontrados exitosamente.";
+            }
         }
         catch (NotFoundException ex)
         {
@@ -265,44 +276,47 @@ public class ClientesService : IClientesService
                                         && cl.CLI_INACTIVO == p_cli_Inactivo
                                         && cl.CLI_BLOQUEO == p_cli_Bloqueo
                                         && cl.CLI_CODIGO == cli_codigo
-
-                                  select new
+                                  select new ClienteDto
                                   {
-                                      cl.CLI_EMPRESA,
-                                      cl.CLI_CODIGO,
-                                      cl.CLI_NOMBRE,
-                                      cl.CLI_NOMBRECOM,
-                                      cl.CLI_AGENTE,
-                                      cl.CLI_ID,
-                                      CLI_LISTAPRE = cl.CLI_LISTAPRE ?? 0,
-                                      CLI_ILIMITADOF = cl.CLI_ILIMITADO ?? 0,
-                                      CLI_ZONA = cl.CLI_ZONA ?? 0,
-                                      ////CDI_DIA = cd != null ? cd.CDI_DIA : null,
-                                      cl.CLI_TELEFONO1,
-                                      cl.CLI_POLITICAS,
-                                      cl.CLI_DIRECCION,
-                                      cl.CLI_DIR_ENTREGA,
-                                      cl.CLI_MAIL,
-                                      cl.CLI_RUC_CEDULA,
-                                      cl.CLI_ESTABLECIMIENTO,
-                                      cl.CLI_PARROQUIA,
-                                      ce.ID_PROVINCIA_FK,
-                                      ce.ID_CANTON_FK,
-                                      p.POL_PORC_DESC,
-                                      p.POL_PORC_FINANC,
-                                      p.POL_PORC_PRO_PAGO,
-                                      p.POL_PORC_PAG_CONTA,
-                                      p.POL_LINEA_CREDITO,
-                                      p.POL_DIAS_PLAZO,
-                                      p.POL_NRO_PAGOS,
-                                      CUPO = 0,  // Asegúrate de que este valor se maneja según la lógica de negocio
-                                      DEUDA = 0  // Ídem
+                                      CLI_EMPRESA = cl.CLI_EMPRESA,
+                                  CLI_CODIGO = cl.CLI_CODIGO,
+                                  CLI_NOMBRE = cl.CLI_NOMBRE,
+                                  CLI_AGENTE = cl.CLI_AGENTE,
+                                  CLI_ID = cl.CLI_ID,
+                                  CLI_LISTAPRE = cl.CLI_LISTAPRE ?? 0,
+                                  CLI_ILIMITADOF = cl.CLI_ILIMITADO ?? 0,
+                                  CLI_ZONA = cl.CLI_ZONA ?? 0,
+                                  CLI_TELEFONO1 = cl.CLI_TELEFONO1,
+                                  CLI_POLITICAS = cl.CLI_POLITICAS,
+                                  CLI_DIRECCION = cl.CLI_DIRECCION,
+                                  CLI_DIR_ENTREGA = cl.CLI_DIR_ENTREGA,
+                                  CLI_NOMBRECOM = cl.CLI_NOMBRECOM,
+                                  CLI_MAIL = cl.CLI_MAIL,
+                                  CLI_RUC_CEDULA = cl.CLI_RUC_CEDULA,
+                                  ID_PROVINCIA_FK = ce.ID_PROVINCIA_FK ?? 0,
+                                  ID_CANTON_FK = ce.ID_CANTON_FK ?? 0,
+                                  CLI_ESTABLECIMIENTO = cl.CLI_ESTABLECIMIENTO,
+                                  POL_PORC_DESC = p.POL_PORC_DESC,
+                                  POL_PORC_FINANC = p.POL_PORC_FINANC,
+                                  POL_PORC_PRO_PAGO = p.POL_PORC_PRO_PAGO,
+                                  POL_PORC_PAG_CONTA = p.POL_PORC_PAG_CONTA,
+                                  POL_LINEA_CREDITO = p.POL_LINEA_CREDITO,
+                                  POL_DIAS_PLAZO = p.POL_DIAS_PLAZO,
+                                  POL_NRO_PAGOS = p.POL_NRO_PAGOS,
+                                  CLI_PARROQUIA = cl.CLI_PARROQUIA,
+                                  CUPO = cl.CLI_CUPO
+                                      
                                   })
                  .OrderBy(x => x.CLI_NOMBRE)
                  .ToListAsync();
 
             var cliente = clientes.FirstOrDefault();
-
+            if (cliente != null)
+            {
+                cliente.DEUDA = await ObtenerDeudaAsync(p_empresa, cli_codigo);
+                cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(p_empresa, cli_codigo, cliente.CLI_AGENTE ?? 0);
+            }
+            
             if (cliente == null )
             {
                 response.Data = null;
@@ -310,7 +324,6 @@ public class ClientesService : IClientesService
                 response.Message = "Cliente no encontrado.";
                 return response;
             }
-
 
             response.Data = cliente;
             response.Success = true;
@@ -323,7 +336,7 @@ public class ClientesService : IClientesService
         }
         catch (Exception ex)
         {
-            // Log the exception details (ex) here as needed
+            
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
             throw new DatabaseException("Error de base de datos.", ex);
@@ -340,7 +353,7 @@ public class ClientesService : IClientesService
 
         try
         {
-            if (cliente != null)
+            if (cliente != null && cliente.Cliente != null)
             {
                 var _singlecliente_ = await (_context.CLIENTE.Where(c => c.CLI_CODIGO == cliente.Cliente.CLI_CODIGO).ToListAsync());
                 var _singlecliente = _singlecliente_.FirstOrDefault();
@@ -357,14 +370,14 @@ public class ClientesService : IClientesService
 
                 var oldValues = new
                 {
-                    Nombre = _singlecliente.CLI_NOMBRE,
-                    Direccion = _singlecliente.CLI_DIRECCION,
-                    DireccionEntrega = _singlecliente.CLI_DIR_ENTREGA,
-                    Email = _singlecliente.CLI_MAIL,
-                    Establecimiento = _singlecliente.CLI_ESTABLECIMIENTO,
-                    Parroquia = _singlecliente.CLI_PARROQUIA, 
-                    Provincia = _clienteExt.ID_PROVINCIA_FK,
-                    Canton = _clienteExt.ID_CANTON_FK
+                    Nombre = _singlecliente?.CLI_NOMBRE,
+                    Direccion = _singlecliente?.CLI_DIRECCION,
+                    DireccionEntrega = _singlecliente?.CLI_DIR_ENTREGA,
+                    Email = _singlecliente?.CLI_MAIL,
+                    Establecimiento = _singlecliente?.CLI_ESTABLECIMIENTO,
+                    Parroquia = _singlecliente?.CLI_PARROQUIA, 
+                    Provincia = _clienteExt?.ID_PROVINCIA_FK,
+                    Canton = _clienteExt?.ID_CANTON_FK
                 };
 
 
@@ -374,8 +387,8 @@ public class ClientesService : IClientesService
                 _singlecliente.CLI_MAIL = cliente.Cliente.CLI_MAIL;
                 
                 _singlecliente.CLI_PARROQUIA = cliente.Cliente.CLI_PARROQUIA;
-                _clienteExt.ID_PROVINCIA_FK = cliente.Cliente_Ext.ID_PROVINCIA_FK;
-                _clienteExt.ID_CANTON_FK = cliente.Cliente_Ext.ID_CANTON_FK;
+                _clienteExt.ID_PROVINCIA_FK = cliente.Cliente_Ext?.ID_PROVINCIA_FK;
+                _clienteExt.ID_CANTON_FK = cliente.Cliente_Ext?.ID_CANTON_FK;
                 _singlecliente.CLI_ESTABLECIMIENTO = cliente.Cliente.CLI_ESTABLECIMIENTO;
                 _context.Entry(_singlecliente).Property(x => x.CLI_DIRECCION).IsModified = true;
                 _context.Entry(_singlecliente).Property(x => x.CLI_DIR_ENTREGA).IsModified = true;
@@ -464,7 +477,27 @@ public class ClientesService : IClientesService
 
         return response;
     }
+    public async Task<decimal> ObtenerDeudaAsync(int empresa, decimal clienteCodigo)
+    {
+        var result = await _context.SaldoCarteraResults
+             .FromSqlRaw("SELECT F_CXC_SALDO_CARTERA_PED_ST_NR(:empresa, :clienteCodigo) AS DEUDA FROM DUAL",
+                         new OracleParameter("empresa", empresa),
+                         new OracleParameter("clienteCodigo", clienteCodigo))
+             .ToListAsync();
 
+        return result.FirstOrDefault()?.DEUDA ?? 0;
+    }
 
+    public async Task<DateTime> ObtenerFechaSugeridaAsync(int empresa, decimal clienteCodigo, decimal agente)
+    {
+        var result = await _context.FechaSugResults
+             .FromSqlRaw("SELECT F_VNT_FECHA_FACTURAR_DT(:empresa, :clienteCodigo, :cliAgente) AS FECHA_SUG FROM DUAL",
+                         new OracleParameter("empresa", empresa),
+                         new OracleParameter("clienteCodigo", clienteCodigo),
+                         new OracleParameter("cliAgente", agente))
+             .ToListAsync();
+
+        return result.FirstOrDefault()?.FECHA_SUG ?? DateTime.Now;
+    }
 }
 

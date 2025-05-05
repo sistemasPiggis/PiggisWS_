@@ -22,4 +22,8 @@ public interface ICarteraService
 
     Task<ServiceResponse<object>> GetDevProductosDenxCodigoAsync(decimal codigo);
     Task<ServiceResponse<object>> GetCarteraxFacDiaCliAsync(Cartera cartera, decimal cliente);
+    Task<ServiceResponse<object>> GetCarteraXClienteAsync(decimal cliente);
+    Task<ServiceResponse<object>> GetAnticiposXClienteAsync(decimal cliente);
+    
+
 }
