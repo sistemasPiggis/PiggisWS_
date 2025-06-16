@@ -55,7 +55,7 @@ public class DescuentoService : IDescuentoService
 
             var q1 = await ( from cc in _context.CC_EST_PEDIDOS
                                  join c in _context.CLIENTE on cc.CCO_CODCLIPRO equals c.CLI_CODIGO
-                                 where cc.CCO_CODCLIPRO == agente
+                                 where c.CLI_AGENTE == agente
                                  select  cc.PRO_CODIGO
                                  ).ToListAsync();
             var q2 = await (from vl in _context.VL_CC_EST_PEDIDOSQ
@@ -79,7 +79,8 @@ public class DescuentoService : IDescuentoService
                                     && ls.DLD_CLIENTE == null && cl.CLI_AGENTE == agente
                                     && ((ls.DLD_FECHA_INI <= fecha && ls.DLD_FECHA_FIN >= fecha) || ls.DLD_FECHA_FIN == null)
                                     && productospedidos.Contains(ls.DLD_PRODUCTO ?? 0)
-                                    select new 
+                                    && (ls.DLD_INACTIVO ?? 0) == 0
+                              select new 
                                     {
                                         cl.CLI_EMPRESA,
                                         cl.CLI_LISTAPRE,
@@ -101,7 +102,8 @@ public class DescuentoService : IDescuentoService
                                     && ls.DLD_CLIENTE == cl.CLI_CODIGO 
                                     && cl.CLI_AGENTE == agente
                                     && ((ls.DLD_FECHA_INI <= fecha && ls.DLD_FECHA_FIN >= fecha) || ls.DLD_FECHA_FIN == null)
-                                    select new
+                                    && (ls.DLD_INACTIVO ?? 0) == 0
+                                     select new
                                     {
                                         cl.CLI_EMPRESA,
                                         cl.CLI_LISTAPRE,
@@ -122,9 +124,9 @@ public class DescuentoService : IDescuentoService
 
             respuesta.Success = true;
             respuesta.Data = descuentos;
-            respuesta.Message = "SE RECUERO LISTA DE DESCUENTOS";
+            respuesta.Message = "SE RECUPERO LISTA DE DESCUENTOS";
             respuesta.Status = 200;
-            _logger.LogError("SE RECUERO LISTA DE DESCUENTOS");
+            _logger.LogError("SE RECUPERO LISTA DE DESCUENTOS");
             return respuesta;
 
         }

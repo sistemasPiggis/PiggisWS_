@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Azure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Newtonsoft.Json;
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
+using PIGGISWS.Models.Vistas;
 using PIGGISWS.Services;
 
 namespace PIGGISWS.Controllers;
@@ -55,6 +57,37 @@ public class AgenteController : ControllerBase
         response.Status = Response.StatusCode;
         return BadRequest(response);
     }
+    [Authorize]
+    [HttpPost("GetCodigoAgentexMailAsync")]
 
+    public async Task<IActionResult> GetCodigoAgentexMailAsync([FromBody] string request)
+    {
+        var response = await _agenteService.GetCodigoAgentexMailAsync(request);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+
+    [Authorize]
+    [HttpGet("ping")]
+        public async Task<IActionResult> Ping()
+        {
+        var response = new ServiceResponse<string>
+        {
+            Data = "ping",
+            Success = true,
+            Message = "Servicio disponible",
+            Status = Response.StatusCode
+        };
+        return Ok(response);
+    }
+    
 
 }

@@ -118,4 +118,121 @@ public class DevolucionController : ControllerBase
         return BadRequest(response.Message);
     }
 
+
+    [Authorize]
+    [HttpPost("GetProDevsxAgeAsync")]
+
+    public async Task<IActionResult> GetProDevsxAgeAsync([FromBody] decimal agente)
+    {
+        var response = await _devolucionesService.GetProDevsxAgeAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetSecuenciaDevAsync")]
+
+    public async Task<IActionResult> GetSecuenciaDevAsync([FromBody] decimal agente)
+    {
+        var response = await _devolucionesService.GetSecuenciaDevAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetDevsxAgeAsync")]
+
+    public async Task<IActionResult> GetDevsxAgeAsync([FromBody] decimal agente)
+    {
+        var response = await _devolucionesService.GetDevsxAgeAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetDevxCodigoAsync")]
+
+    public async Task<IActionResult> GetDevxCodigoAsync([FromBody] AuxGeneral dev)
+    {
+        var response = await _devolucionesService.GetDevxCodigoAsync(dev);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+    [Authorize]
+    [HttpPost("GetDevDetxCodigoAsync")]
+
+    public async Task<IActionResult> GetDevDetxCodigoAsync([FromBody] AuxGeneral dev)
+    {
+        var response = await _devolucionesService.GetDevDetxCodigoAsync(dev);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetDevProdApCodigoAsync")]
+
+    public async Task<IActionResult> GetDevProdApCodigoAsync([FromBody] AuxGeneral dev)
+    {
+        var response = await _devolucionesService.GetDevProdApCodigoAsync(dev);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetDevProDenCodigoAsync")]
+
+    public async Task<IActionResult> GetDevProDenCodigoAsync([FromBody] AuxGeneral dev)
+    {
+        var response = await _devolucionesService.GetDevProDenCodigoAsync(dev);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
 }

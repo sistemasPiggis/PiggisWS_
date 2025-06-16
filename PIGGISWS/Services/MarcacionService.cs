@@ -95,7 +95,6 @@ public class MarcacionService: IMarcacionService
 
                 if (!string.IsNullOrEmpty(marcacion_Agente.ENTRADA1_MOVIL))
                 {
-
                     marcacion_Agente.ENTRADA1 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.ENTRADA1_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA1_MOVIL).ToString("HH:mm");
 

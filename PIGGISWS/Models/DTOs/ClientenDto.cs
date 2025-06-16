@@ -34,8 +34,8 @@ public class ClienteDto
     public decimal DISPONIBLE { get; set; }
     public DateTime? FECHA_SUG { get; set; }
     public int CLI_BLOQUEO { get; set; }
-    public decimal CLI_LATITUD_NR { get; set; }
-    public decimal CLI_LONGITUD_NR { get; set; }
-    public decimal CLI_LATITUD1_NR { get; set; }
-    public decimal CLI_LONGITUD1_NR { get; set;}
+    public decimal? CLI_LATITUD_NR { get; set; }
+    public decimal? CLI_LONGITUD_NR { get; set; }
+    public decimal? CLI_LATITUD1_NR { get; set; }
+    public decimal? CLI_LONGITUD1_NR { get; set;}
 }

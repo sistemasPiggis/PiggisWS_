@@ -24,6 +24,8 @@ public interface ICarteraService
     Task<ServiceResponse<object>> GetCarteraxFacDiaCliAsync(Cartera cartera, decimal cliente);
     Task<ServiceResponse<object>> GetCarteraXClienteAsync(decimal cliente);
     Task<ServiceResponse<object>> GetAnticiposXClienteAsync(decimal cliente);
-    
+    Task<ServiceResponse<object>> GetReportesxAgenteAsync(decimal agente);
+    Task<ServiceResponse<object>> GetReportexNumeroAsync(Cartera cartera);
 
+    Task<ServiceResponse<object>> CierreReporteAsync(AuxGeneral auxGeneral);
 }

@@ -35,4 +35,5 @@ public class CComprobai
     public int? CCO_ANIO { get; set; }
     public string? CCO_DETALLE { get; set; } = string.Empty;
     public int CCO_NUMERO { get; set; }
+    public string? CREA_USR { get; set; }
 }

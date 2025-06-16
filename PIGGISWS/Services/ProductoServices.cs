@@ -50,7 +50,7 @@ public class ProductoService : IProductoService
                              && cl.CLI_AGENTE == agente
                              && (cl.CLI_INACTIVO ?? 0) == p_cli_Inactivo
                              && cl.CLI_LISTAPRE != null)
-                            .Select(cl => cl.CLI_LISTAPRE ?? 0) // Cambio aquí: seleccione directamente el valor int
+                            .Select(cl => cl.CLI_LISTAPRE ?? 0) 
                             .Distinct()
                             .ToListAsync();
 
@@ -141,6 +141,7 @@ public class ProductoService : IProductoService
 
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+        var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
 
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
@@ -148,8 +149,6 @@ public class ProductoService : IProductoService
 
         try
         {
-
-
 
             var productos =  (
               from cc in _context.CCOMPROBA
@@ -161,17 +160,20 @@ public class ProductoService : IProductoService
               where cc.CCO_FECHA >= p_dias_lapso
                     && cc.CCO_SIGLA == 673
                     && cl.CLI_AGENTE == agente
-                    && cld.CDI_DIA == dayformateado
+                    && (
+                                            diasPermitidos.Contains(dayformateado)
+                                            || (cld.CDI_DIA != null && cld.CDI_DIA == dayformateado)
+                                        )
               select new
               {
                   cd.DFAC_PRODUCTO,
                   cc.CCO_CODCLIPRO
               }
           )
-          .AsEnumerable() // Operamos en memoria después de traer los datos
-          .GroupBy(g => g.CCO_CODCLIPRO) // Agrupamos por cliente
+          .AsEnumerable() 
+          .GroupBy(g => g.CCO_CODCLIPRO) 
           .SelectMany(g => g
-              .GroupBy(x => x.DFAC_PRODUCTO) // Agrupamos por producto dentro de cada cliente
+              .GroupBy(x => x.DFAC_PRODUCTO) 
               .Select(productGroup => new
               {
                   DFAC_PRODUCTO = productGroup.Key,
@@ -179,7 +181,7 @@ public class ProductoService : IProductoService
                   Ranking = productGroup.Count()
               })
               .OrderByDescending(x => x.Ranking) 
-              .Take(30)) // Tomamos los 30 primeros de cada cliente
+              .Take(50)) // Tomamos los 50 primeros de cada cliente
           .ToList(); 
 
 
@@ -187,7 +189,10 @@ public class ProductoService : IProductoService
 
             if (productos == null || !productos.Any())
             {
-                throw new NotFoundException("No se encontraron Productos.");
+                response.Data = null;
+                response.Success = true;
+                response.Message = "TOP PRODUCTOS NO ENCONTRADOS.";
+                return response;
             }
 
             response.Data = productos;

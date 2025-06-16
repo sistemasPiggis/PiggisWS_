@@ -38,7 +38,8 @@ public class Clientes_Nuevos
     public string DIRECCION_ENTREGA { get; set; } = string.Empty ;
     [Required]
     public int TIPO_IDENTIFICACION { get; set; }
-    public int? LATITUD_NR {  get; set; }
-    public int? LONGITUD_NR { get; set;}
+    public decimal? LATITUD_NR {  get; set; }
+    public decimal? LONGITUD_NR { get; set;}
+    public DateTime? CREA_FECHA { get; set; } = DateTime.Now;
 
 }

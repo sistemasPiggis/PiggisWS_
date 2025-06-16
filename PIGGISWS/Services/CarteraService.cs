@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Oracle.ManagedDataAccess.Client;
 using Oracle.ManagedDataAccess.Types;
 using PIGGISWS.Data;
@@ -17,6 +18,7 @@ public class CarteraService : ICarteraService
 {
 
     private readonly ApplicationDbContext _context;
+    private readonly IAgenteService _agenteService;
     ServiceResponse<object> respuesta = new ServiceResponse<object>();
 
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
@@ -24,11 +26,14 @@ public class CarteraService : ICarteraService
     int p_car_siglafac;
     decimal CRT_NUMERO;
     int p_dias_anticipo;
+    string usuarioAg;
 
-    public CarteraService(ApplicationDbContext context)
+    public CarteraService(ApplicationDbContext context, IAgenteService agenteService)
     {
         _context = context;
         GetParametros();
+        _agenteService = agenteService;
+        usuarioAg = string.Empty;
     }
     public void GetParametros()
     {
@@ -38,6 +43,7 @@ public class CarteraService : ICarteraService
             p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
             p_car_siglafac = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 55)?.VALOR ?? "0");
             p_dias_anticipo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 57)?.VALOR ?? "0");
+           
         }
         catch (Exception ex)
         {
@@ -127,6 +133,7 @@ public class CarteraService : ICarteraService
                                    SALDO = dd.DDO_MONTO - (dd.DDO_CANCELA ?? 0),
                                    CLI_NOMBRE = cl.CLI_NOMBRE,
                                    ZON_NOMBRE = zo.ZON_NOMBRE,
+                                   CRT_MONTO = dd.DDO_MONTO
                                    ///AGE_NOMBRE = a.AGE_NOMBRE
                                }
                                ).OrderBy(c => c.dDocumento.DDO_FECHA_VEN )
@@ -277,6 +284,9 @@ public class CarteraService : ICarteraService
     {
         var response = new ServiceResponse<object>();
 
+        decimal agente = cartera.cartera?.CRT_AGENTE ?? 0;
+        usuarioAg = await _agenteService.GetUsuarioAsync(agente);
+
         if (cartera != null && cartera.cartera != null && cartera.dDocumento != null)
         {
             using (var transaction = await _context.Database.BeginTransactionAsync())
@@ -323,7 +333,8 @@ public class CarteraService : ICarteraService
                             CRT_CANCELA = cartera.cartera.CRT_CANCELA,
                             CRT_CANCELA_CH = cartera.cartera.CRT_CANCELA_CH ?? 0,
                             CRT_SECUENCIA = 1,
-                            CRT_ESTADO = 1
+                            CRT_ESTADO = 1, 
+                            CREA_USR = usuarioAg
                         };
 
                         await _context.CARTERA.AddAsync(_cartera);
@@ -331,6 +342,8 @@ public class CarteraService : ICarteraService
 
                         if (carterasave > 0)
                         {
+
+
                             var hoy = DateTime.Today;
                             var ruteros = await _context.RUTERO
                                 .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date 
@@ -365,6 +378,12 @@ public class CarteraService : ICarteraService
                                 await _context.SaveChangesAsync();
                                 await transaction.CommitAsync();
                             }
+
+
+
+
+                            await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
+
 
                             response.Data = _cartera;
                             response.Success = true;
@@ -414,7 +433,8 @@ public class CarteraService : ICarteraService
                                     CRT_CANCELA = cartera.cartera.CRT_CANCELA,
                                     CRT_CANCELA_CH = cartera.cartera.CRT_CANCELA_CH ?? 0,
                                     CRT_SECUENCIA = sec + 1,
-                                    CRT_ESTADO = 1
+                                    CRT_ESTADO = 1, 
+                                    CREA_USR = usuarioAg
                                 };
 
                                 await _context.CARTERA.AddAsync(_cartera);
@@ -422,6 +442,7 @@ public class CarteraService : ICarteraService
 
                                 if (carterasave > 0)
                                 {
+
                                     var hoy = DateTime.Today;
                                     var ruteros = await _context.RUTERO
                                         .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
@@ -429,6 +450,13 @@ public class CarteraService : ICarteraService
 
                                     if (rutero != null)
                                     {
+                                        if (usuarioAg != null)
+                                        {
+                                            _cartera.CREA_USR = usuarioAg;
+                                            _context.CARTERA.Update(_cartera);
+                                            await _context.SaveChangesAsync();
+
+                                        }
                                         rutero.RUT_COBRO = 1;
                                         rutero.RUT_VISITA = 1;
                                         await _context.SaveChangesAsync();
@@ -449,11 +477,19 @@ public class CarteraService : ICarteraService
                                             RUT_ZONA = zona ?? 0,
                                             RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
                                         };
+                                        if (usuarioAg != null)
+                                        {
+                                            _cartera.CREA_USR = usuarioAg;
+                                            _context.CARTERA.Update(_cartera);
+                                            await _context.SaveChangesAsync();
+
+                                        }
 
                                         await _context.RUTERO.AddAsync(nuevoRutero);
                                         await _context.SaveChangesAsync();
                                         await transaction.CommitAsync();
                                     }
+                                    await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
 
                                     response.Data = _cartera;
                                     response.Success = true;
@@ -498,7 +534,8 @@ public class CarteraService : ICarteraService
                                         CRT_CANCELA = cartera.cartera.CRT_CANCELA,
                                         CRT_CANCELA_CH= cartera.CRT_CANCELA_CH,
                                         CRT_SECUENCIA = 1,
-                                        CRT_ESTADO = 1
+                                        CRT_ESTADO = 1,
+                                        CREA_USR = usuarioAg
                                     };
 
                                     await _context.CARTERA.AddAsync(_cartera);
@@ -513,6 +550,14 @@ public class CarteraService : ICarteraService
                                         var rutero = ruteros.FirstOrDefault();
                                         if (rutero != null)
                                         {
+                                            if (usuarioAg != null)
+                                            {
+                                                _cartera.CREA_USR = usuarioAg;
+                                                _context.CARTERA.Update(_cartera);
+                                                await _context.SaveChangesAsync();
+
+                                            }
+
                                             rutero.RUT_COBRO = 1;
                                             rutero.RUT_VISITA = 1;
                                             await _context.SaveChangesAsync();
@@ -533,11 +578,19 @@ public class CarteraService : ICarteraService
                                                 RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
 
                                             };
+                                            if (usuarioAg != null)
+                                            {
+                                                _cartera.CREA_USR = usuarioAg;
+                                                _context.CARTERA.Update(_cartera);
+                                                await _context.SaveChangesAsync();
 
+                                            }
                                             await _context.RUTERO.AddAsync(nuevoRutero);
                                             await _context.SaveChangesAsync();
                                             await transaction.CommitAsync();
                                         }
+
+                                        await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
 
                                         response.Data = _cartera;
                                         response.Success = true;
@@ -668,6 +721,220 @@ public class CarteraService : ICarteraService
         return response;
     }
 
+    public async Task DesbloquearClienteAsync(string usuario, decimal clienteCodigo)
+    {
+        try
+        {
+            // Crear los parámetros para el procedimiento almacenado
+            var paramClienteCodigo = new OracleParameter("P_CLI_CODIGO", OracleDbType.Decimal)
+            {
+                Value = clienteCodigo,
+                Direction = ParameterDirection.Input
+            };
+
+            var paramUsuario = new OracleParameter("P_USUARIO", OracleDbType.Varchar2)
+            {
+                Value = usuario,
+                Direction = ParameterDirection.Input
+            };
+
+            // Ejecutar el procedimiento almacenado
+            await _context.Database.ExecuteSqlRawAsync(
+                "BEGIN P_CXC_DESBLOQUEO_XCLIENTE(:P_CLI_CODIGO, :P_USUARIO); END;",
+                paramClienteCodigo,
+                paramUsuario
+            );
+
+            Console.WriteLine("Procedimiento ejecutado exitosamente.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+            throw;
+        }
+    }
+
+
+    public async Task<ServiceResponse<object>> GetReportesxAgenteAsync(decimal agente)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            var yearNow = DateTime.Now.Year;
+            var resultados = await _context.CARTERA
+                .Where(ct => ct.CRT_AGENTE == agente
+                    && ((ct.CRT_CANCELA ?? 0) != 0 || (ct.CRT_CANCELA_CH ?? 0) != 0)
+                    && ct.CRT_FECHA.HasValue && ct.CRT_FECHA.Value.Year == yearNow)
+                .Select(ct => new
+                {
+                    CRT_DOCTRAN = (ct.CRT_FECHA.HasValue ? ct.CRT_FECHA.Value.ToString("yyyy-MM-dd") : "") + "-" + ct.CRT_NUMERO ,
+                    CRT_NUMERO = ct.CRT_NUMERO,
+                    CRT_AGENTE =ct.CRT_AGENTE
+                })
+                .Distinct()
+                .OrderByDescending(x => x.CRT_NUMERO)
+                .ToListAsync();
+
+
+            if (resultados == null || !resultados.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA REPORTES";
+                return response;
+            }
+
+            response.Data = resultados;
+            response.Success = true;
+            response.Message = "REPORTES ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+        }
+        return response;
+    }
+
+    public async Task<ServiceResponse<object>> GetReportexNumeroAsync(Cartera cartera)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            var resultados = await (
+                from ca in _context.CARTERA
+                join cl in _context.CLIENTE on ca.CRT_CLIENTE equals cl.CLI_CODIGO
+                join z in _context.ZONA on cl.CLI_ZONA equals z.ZON_CODIGO
+                join a in _context.AGENTE on ca.CRT_AGENTE equals a.AGE_CODIGO
+                join d in _context.DDOCUMENTO on new { ca.CRT_DDO_COMPROBA, ca.CRT_TRANSACC, ca.CRT_DOCTRAN, ca.CRT_PAGO }
+                                              equals new
+                                              {
+                                                  CRT_DDO_COMPROBA = d.DDO_CCO_COMPROBA,
+                                                  CRT_TRANSACC = d.DDO_TRANSACC,
+                                                  CRT_DOCTRAN = d.DDO_DOCTRAN,
+                                                  CRT_PAGO = d.DDO_PAGO
+                                              }
+                where ca.CRT_NUMERO == cartera.CRT_NUMERO
+                select new
+                {
+                    ZONA = z.ZON_NOMBRE,
+                    AGE_NOMBRE = a.AGE_NOMBRE,
+                    CLI_NOMBRE = cl.CLI_NOMBRE,
+                    CRT_DOCTRAN = d.DDO_DOCTRAN,
+                    CRT_MONTO = ca.CRT_MONTO,
+                    SALDO = d.DDO_MONTO - (d.DDO_CANCELA ?? 0),
+                    CRT_CANCELA = ca.CRT_CANCELA,
+                    CRT_CANCELA_CH = ca.CRT_CANCELA_CH
+                }
+            )
+            
+            .ToListAsync();
+
+
+            if (resultados == null || !resultados.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA REPORTES";
+                return response;
+            }
+
+            response.Data = resultados;
+            response.Success = true;
+            response.Message = "REPORTES ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+        }
+        return response;
+    }
+
+
+    public async Task<ServiceResponse<object>> CierreReporteAsync(AuxGeneral auxGeneral)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            if (auxGeneral == null || auxGeneral.AuxDecimal <= 0 || auxGeneral.AGE_CODIGO <= 0)
+            {
+                response.Data = null;
+                response.Success = false;
+                response.Message = "Los datos proporcionados son nulos o inválidos.";
+                return response;
+            }
+
+
+            await EnviaReporteAsync(auxGeneral.AuxDecimal ?? 0, auxGeneral.AGE_CODIGO ?? 0);
+
+            var registros = await _context.CARTERA
+                        .Where(c => c.CRT_NUMERO == auxGeneral.AuxDecimal 
+                        && c.CRT_AGENTE == auxGeneral.AGE_CODIGO && c.CRT_ESTADO==2)
+                        .ToListAsync();
+
+                              
+
+            if (registros != null || registros.Any())
+            {
+                response.Success = true;
+                response.Message = "REPORTE CERRADO CORRECTAMENTE";
+            }
+            else
+
+            {
+                response.Success = true;
+                response.Message = "NO SE CERRÓ EL REPORTE VERIFICAR CON EL DEPARTAMENTO DE CARTERA";
+            }
+
+
+
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+        }
+        return response;
+    }
+
+
+    public async Task EnviaReporteAsync(decimal numero, decimal agente)
+    {
+        try
+        {
+            // Crear los parámetros para el procedimiento almacenado
+            var paramClienteCodigo = new OracleParameter("P_NUMERO", OracleDbType.Decimal)
+            {
+                Value = numero,
+                Direction = ParameterDirection.Input
+            };
+
+            var paramUsuario = new OracleParameter("P_USR_ID", OracleDbType.Decimal)
+            {
+                Value = agente,
+                Direction = ParameterDirection.Input
+            };
+
+            // Ejecutar el procedimiento almacenado
+            await _context.Database.ExecuteSqlRawAsync(
+                "BEGIN DATA_USR.P_CXC_ENVIA_REPORTE(:P_NUMERO, :P_USR_ID); END;",
+                paramClienteCodigo,
+                paramUsuario
+            );
+
+            Console.WriteLine("Procedimiento ejecutado exitosamente.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+            throw;
+        }
+    }
+
     #region Notas de Credito
 
     public async Task<ServiceResponse<object>> GetClientesNcsAsync(decimal agente)
@@ -685,7 +952,6 @@ public class CarteraService : ICarteraService
                                 REFERENCIA = r.CMO_REFERENCIA,
                                 CLI_NOMBRE = r.CLI_NOMBRE
                             })
-                            .OrderBy(o => o.CLI_NOMBRE)
                             .ToListAsync();
 
 
@@ -912,7 +1178,7 @@ public class CarteraService : ICarteraService
                                join pr in _context.PRODUCTO on dm.DMO_PRODUCTO equals pr.PRO_CODIGO
                                join um in _context.UMEDIDA on dm.DMO_UDIGITADA equals um.UMD_CODIGO
                                join td in _context.TIPODEV on dm.DMO_TIPODEV equals td.TDE_CODIGO
-                               where cc.CCO_EMPRESA == p_empresa && cc.CCO_CODIGO == codigo
+                               where cc.CCO_CODIGO == codigo
                                select new
                                {
                                   pr.PRO_ID,
@@ -932,7 +1198,7 @@ public class CarteraService : ICarteraService
                 var numero = await ObtenerNumeroComprobanteAsync(item.DMO_EMPRESA, item.DMO_FAC_COMPROBA);
                 result.Add(new
                 {
-                    CCO_CODIGO = numero,
+                    FACTURA = numero,
                     ID= item.PRO_ID,
                     PRODUCTO= item.PRO_NOMBRE,
                     UNIDAD= item.UMD_ID,

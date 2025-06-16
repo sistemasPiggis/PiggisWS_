@@ -234,9 +234,9 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
                         _context.Entry(trackedEntity).State = EntityState.Detached;
                     }
                     _context.TMP_MARCACION_AGENTE.Add(nuevoMarcacionAgente);
-                    _logger.LogInformation($"Insertado AGE_CODIGO: {nuevoMarcacionAgente.AGE_CODIGO}," +
-                        $" {campoMovil}: {nuevoMarcacionAgente.GetType().GetProperty(campoMovil).GetValue(nuevoMarcacionAgente)}, " +
-                        $"{ubicacion}: {nuevoMarcacionAgente.GetType().GetProperty(ubicacion).GetValue(nuevoMarcacionAgente)}, MAR_FECHA: {nuevoMarcacionAgente.MAR_FECHA}");
+                    //_logger.LogInformation($"Insertado AGE_CODIGO: {nuevoMarcacionAgente.AGE_CODIGO}," +
+                    //    $" {campoMovil}: {nuevoMarcacionAgente.GetType().GetProperty(campoMovil).GetValue(nuevoMarcacionAgente)}, " +
+                    //    $"{ubicacion}: {nuevoMarcacionAgente.GetType().GetProperty(ubicacion).GetValue(nuevoMarcacionAgente)}, MAR_FECHA: {nuevoMarcacionAgente.MAR_FECHA}");
 
                 }
             }

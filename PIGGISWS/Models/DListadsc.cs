@@ -13,7 +13,7 @@
     public DateTime? DLD_FECHA_INI { get; set; }
     public DateTime? DLD_FECHA_FIN {  get; set; }
     public decimal? DLD_PORCENTAJE { get; set; }
-    public int DLD_INACTIVO { get; set; }
+    public int? DLD_INACTIVO { get; set; }
     public decimal ? DLD_UMEDIDA { get; set; }
     public decimal? DLD_CLIENTE { get; set; }
     public decimal? DLD_PORCENTAJE2 { get; set; }

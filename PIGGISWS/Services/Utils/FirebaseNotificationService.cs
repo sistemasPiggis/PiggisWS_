@@ -25,18 +25,21 @@ public class FirebaseNotificationService: IFirebaseNotificationService
     private const string FirebaseServerKey = "AAAA47TFP4g:APA91bGASDjXVLGZpGqRdMDAvLGna-tLziR1imYaKsLfQhTa75Zpw79c2qB-seXvBF05dIQ1y23JmLEy3oeTHyjKfC59HrbzekjOsqfB-7W7osr05OYmuDeuu4bwnuhY0QS6y7dGvJ-b";
     private const string FcmUrl = "https://fcm.googleapis.com/v1/projects/977990401928/messages:send";
     private readonly HttpClient _httpClient;
+    private readonly ILogger<FirebaseNotificationService> _logger;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
+    
     int contador =0;
     int p_empresa;
     int p_not_inactivo;
     int p_not_procesada;
 
     // Constructor público para que el contenedor de dependencias pueda inyectarlo
-    public FirebaseNotificationService(HttpClient httpClient , ApplicationDbContext context)
+    public FirebaseNotificationService(HttpClient httpClient , ApplicationDbContext context, ILogger<FirebaseNotificationService> logger)
     {
         _httpClient = httpClient;
         _context = context;
         GetParametros();
+        _logger = logger;
     }
 
 
@@ -186,6 +189,7 @@ public class FirebaseNotificationService: IFirebaseNotificationService
                 _response.Message = "No existe notificación en la base de datos o esta inactiva";
 
                 _response.Success = true;
+                _logger.LogInformation("Se ha ejecutado SendALLFcmMessageAsync." + _response.Message);
                 return _response;
             }
 
@@ -240,6 +244,7 @@ public class FirebaseNotificationService: IFirebaseNotificationService
             _response.Message = "Notificación enviada correctamente el número de notificaciones es:" + contador;
 
             _response.Success = true;
+            _logger.LogInformation("Se ha ejecutado SendALLFcmMessageAsync.");
             return _response;
 
         }
@@ -248,6 +253,7 @@ public class FirebaseNotificationService: IFirebaseNotificationService
             _response.Message = ex.ToString();
             _response.Data = null;
             _response.Success = false;
+            _logger.LogError(ex, "Error al ejecutar SendALLFcmMessageAsync.");
         }
         return _response;
     }

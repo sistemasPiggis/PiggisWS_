@@ -249,4 +249,55 @@ public class CarteraController : ControllerBase
         return BadRequest(response.Message);
     }
 
+    [Authorize]
+    [HttpPost("GetReportesxAgenteAsync")]
+
+    public async Task<IActionResult> GetReportesxAgenteAsync([FromBody] decimal agente)
+    {
+        var response = await _carteraService.GetReportesxAgenteAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+
+    [Authorize]
+    [HttpPost("GetReportexNumeroAsync")]
+
+    public async Task<IActionResult> GetReportexNumeroAsync([FromBody] Cartera cartera)
+    {
+        var response = await _carteraService.GetReportexNumeroAsync(cartera);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+    [Authorize]
+    [HttpPost("CierreReporteAsync")]
+
+    public async Task<IActionResult> CierreReporteAsync([FromBody] AuxGeneral reporte)
+    {
+        var response = await _carteraService.CierreReporteAsync(reporte);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
 }

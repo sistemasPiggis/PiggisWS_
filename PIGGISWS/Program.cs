@@ -80,7 +80,7 @@ builder.Logging.AddDebug(); // Para loggear en la ventana de salida de Visual St
 builder.Logging.AddEventSourceLogger(); // Otras opciones de logging
 
 var app = builder.Build();
-
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(options =>
   options.WithOrigins("*")
     .AllowAnyMethod()

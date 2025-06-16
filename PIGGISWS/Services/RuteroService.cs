@@ -34,68 +34,82 @@ public class RuteroService : IRuteroService
 
     public async Task<ServiceResponse<object>> SetRuteroPedidoAsync(decimal cliente, decimal agente, DateTime fecha, decimal zona)
     {
-        var response = new ServiceResponse<object>();
-        var startOfDay = fecha.Date; // Inicio del día actual
-        var endOfDay = fecha.Date.AddDays(1);
-        var ruteros = await _context.RUTERO
-                         .Where(r => r.RUT_CLIENTE == cliente
-                                      && r.RUT_AGENTE == agente
-                                      && r.RUT_FECHA >= startOfDay
-                                      && r.RUT_FECHA < endOfDay)
-                         .ToListAsync();
-        var rutero = ruteros.FirstOrDefault();
-        if ( rutero is null)
+        try
         {
-            var _rutero = new Rutero
+            var response = new ServiceResponse<object>();
+            var startOfDay = fecha.Date; // Inicio del día actual
+            var endOfDay = fecha.Date.AddDays(1);
+            var ruteros = await _context.RUTERO
+                             .Where(r => r.RUT_CLIENTE == cliente
+                                          && r.RUT_AGENTE == agente
+                                          && r.RUT_FECHA >= startOfDay
+                                          && r.RUT_FECHA < endOfDay)
+                             .ToListAsync();
+            var rutero = ruteros.FirstOrDefault();
+            if (rutero is null)
             {
-                RUT_EMPRESA = p_empresa,
-                RUT_FECHA = fecha.Date,
-                RUT_AGENTE = agente,
-                RUT_CLIENTE = cliente,
-                RUT_ZONA = zona,
-                RUT_PEDIDO = 1,
-                RUT_VISITA = 1
-                
+                var _rutero = new Rutero
+                {
+                    RUT_EMPRESA = p_empresa,
+                    RUT_FECHA = fecha.Date,
+                    RUT_AGENTE = agente,
+                    RUT_CLIENTE = cliente,
+                    RUT_ZONA = zona,
+                    RUT_PEDIDO = 1,
+                    RUT_VISITA = 1
+
+                };
+                await _context.RUTERO.AddAsync(_rutero);
+                int ruterosave = await _context.SaveChangesAsync();
+                if (ruterosave > 0)
+                {
+                    response.Success = true;
+                    response.Data = _rutero;
+                    response.Message = "RUTERO GUARDADO EXITOSAMENTE";
+                }
+                else
+                {
+                    response.Success = false;
+                    response.Data = null;
+                    response.Message = "ERROR AL INSERTAR EL RUTERO";
+                }
+            }
+            else
+            {
+               int ruteroUpdate = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                            UPDATE RUTERO
+                            SET RUT_PEDIDO = 1, RUT_VISITA = 1
+                            WHERE RUT_CLIENTE = {cliente}
+                              AND RUT_AGENTE = {agente}
+                              AND RUT_FECHA >= {startOfDay}
+                              AND RUT_FECHA < {endOfDay}
+");
+
+                if (ruteroUpdate > 0)
+                {
+                    response.Success = true;
+                    response.Data = rutero;
+                    response.Message = "RUTERO ACTUALIZADO EXITOSAMENTE";
+                }
+                else
+                {
+                    response.Success = false;
+                    response.Data = null;
+                    response.Message = "ERROR AL ACTUALIZAR EL RUTERO";
+                }
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            return new ServiceResponse<object>
+            {
+                Success = false,
+                Message = "ERROR AL GUARDAR RUTERO: " + ex.Message,
+                Data = null
             };
-            await _context.RUTERO.AddAsync(_rutero);
-            int ruterosave = await _context.SaveChangesAsync();
-            if (ruterosave > 0)
-            {
-                response.Success = true;
-                response.Data = _rutero;
-                response.Message = "RUTERO GUARDADO EXITOSAMENTE";
-            }
-            else
-            {
-                response.Success = false;
-                response.Data = null;
-                response.Message = "ERROR AL INSERTAR EL RUTERO";
-            }
         }
-        else
-        {
-            _context.Attach(rutero);
-            rutero.RUT_PEDIDO = 1; // Aquí puedes ajustar cómo deseas modificar el valor.
-            rutero.RUT_VISITA = 1; // Aquí puedes ajustar cómo deseas modificar el valor.
-
-            _context.Entry(rutero).State = EntityState.Modified;
-            int ruteroUpdate = await _context.SaveChangesAsync();
-
-            if (ruteroUpdate > 0)
-            {
-                response.Success = true;
-                response.Data = rutero;
-                response.Message = "RUTERO ACTUALIZADO EXITOSAMENTE";
-            }
-            else
-            {
-                response.Success = false;
-                response.Data = null;
-                response.Message = "ERROR AL ACTUALIZAR EL RUTERO";
-            }
-        }
-
-        return response;
     }
 
 
@@ -103,7 +117,8 @@ public class RuteroService : IRuteroService
     {
         var response = new ServiceResponse<object>();
         System.DayOfWeek dayOfWeek = fecha.DayOfWeek;
-        TimeSpan _horapedido = fecha.TimeOfDay;
+        TimeSpan _horapedido = DateTime.Now.TimeOfDay;
+        
         TimeSpan horapedido = new TimeSpan(_horapedido.Hours, _horapedido.Minutes, 0);
         CultureInfo ci = new CultureInfo("es-ES");
 
@@ -198,12 +213,14 @@ public class RuteroService : IRuteroService
                             response.Success = true;
                             response.Message = "VISITA REGISTRADA EXISTOSAMENTE";
                             response.Data = rutero_;
+                            return response;
                         }
                         else
                         {
                             response.Success = true;
                             response.Message = "ERROR AL GRABAR VISITA";
                             response.Data = rutero_;
+                            return response;
                         }
                     }
                     else
@@ -211,6 +228,7 @@ public class RuteroService : IRuteroService
                        response.Success = true;
                        response.Message = "YA SE REGISTRO PEDIDO, COBRO O VISITA";
                        response.Data = null;
+                        return response;
                     }
                 }
             }
@@ -219,6 +237,7 @@ public class RuteroService : IRuteroService
                 response.Success = true;
                 response.Message = "NO SE TIENEN DATOS DE CLIENTE VERIFICAR DATOS";
                 response.Data = null;
+                return response;
             }
         }
         catch (Exception ex)

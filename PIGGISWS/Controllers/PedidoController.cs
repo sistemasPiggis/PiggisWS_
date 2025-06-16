@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models.Auxiliares;
 using PIGGISWS.Models.DTOs;
+using PIGGISWS.Models.Vistas;
 
 namespace PIGGISWS.Controllers;
 [ApiController]
@@ -111,7 +112,7 @@ public class PedidoController : Controller
 
         if (response.Success)
         {
-            response.Status = Response.StatusCode;
+            response.Status = response.Status;
             _logger.LogInformation("Pedido creado exitosamente: {@Response}", response);
             return Ok(response);
         }
@@ -161,4 +162,56 @@ public class PedidoController : Controller
         return BadRequest(response.Message);
     }
 
+
+
+    [Authorize]
+    [HttpPost("GetFacsxClienteAsync")]
+
+    public async Task<IActionResult> GetFacsxClienteAsync([FromBody] decimal request)
+    {
+
+
+
+        var response = await _pedidoservice.GetFacsxClienteAsync(request);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+    [Authorize]
+    [HttpPost("GetFacDetalleAsync")]
+
+    public async Task<IActionResult> GetFacDetalleAsync([FromBody] Rep_Cantidades_Pedidosa request)
+    {
+        var response = await _pedidoservice.GetFacDetalleAsync(request);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetEnvHoyAsync")]
+
+    public async Task<IActionResult> GetEnvHoyAsync([FromBody] decimal request)
+    {
+        var response = await _pedidoservice.GetEnvHoyAsync(request);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
 }

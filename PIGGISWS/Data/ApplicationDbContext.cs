@@ -81,6 +81,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Total> TOTAL { get; set; }
 
     public DbSet<DMovInvi> DMOVINVI { get; set; }
+    public DbSet<DmovInv> DMOVINV { get; set; }
 
     public DbSet<TipoDev> TIPODEV { get; set; }
     public DbSet<NextVal> NEXVAL { get; set; }
@@ -108,10 +109,18 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rep_Cantidades_Pedidosa> REP_CANTIDADES_PEDIDOSA { get; set; }
     public DbSet<Rep_Cons_Cartera_Interneta> REP_CONS_CARTERA_INTERNETA { get; set; }
     public DbSet<REP_CANTIDADES_VENTAS_2009> REP_CANTIDADES_VENTAS_2009 { get; set; }
+    public DbSet<REP_PEDIDOS_INT_X_DAPP> REP_PEDIDOS_INT_X_DAPP { get; set; }
+    public DbSet<Tmp_Dev_Pro_Cli_Age> TMP_DEV_PROD_CLI_AGE { get; set; }
+    public DbSet<REP_DET_ESTADO_DESPACHO_PED> REP_DET_ESTADO_DESPACHO_PED { get; set; }
+
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
             .HasKey(a => new { a.AGE_CODIGO, a.AGE_EMPRESA });
+        modelBuilder.Entity<Tmp_Dev_Pro_Cli_Age>()
+            .HasKey(a => new { a.CODIGO_PK });
 
         modelBuilder.Entity<Clientes_Nuevos>()
             .HasKey(cn => new { cn.ID_SECUENCIA_PK });
@@ -154,6 +163,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Rep_Cantidades_Pedidosa>().ToTable("REP_CANTIDADES_PEDIDOSA").HasKey(a => new { a.DOC, a.PRO_CODIGO, a.DFAC_CANTIDAD });
         modelBuilder.Entity<Rep_Cons_Cartera_Interneta>().ToTable("REP_CONS_CARTERA_INTERNETA").HasKey(a => new { a.DOC, a.DDO_CODCLIPRO });
         modelBuilder.Entity<REP_CANTIDADES_VENTAS_2009>().ToTable("REP_CANTIDADES_VENTAS_2009").HasKey(a => new { a.DOC, a.PRO_NOMBRE, a.TOTAL_LIBRAS });
+        modelBuilder.Entity<REP_PEDIDOS_INT_X_DAPP>().ToTable("REP_PEDIDOS_INT_X_DAPP").HasKey(a => new { a.DOC, a.CCO_AGENTE, a.CANTIDAD_KILOS });
+        modelBuilder.Entity<REP_DET_ESTADO_DESPACHO_PED>().ToTable("REP_DET_ESTADO_DESPACHO_PED").HasKey(a => new { a.FAC, a.ESTADO_DESPACHO, a.CLI_NOMBRE });
+
         #endregion
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
@@ -267,7 +279,8 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<DMovInvi>()
          .HasKey(u => new { u.DMO_EMPRESA, u.DMO_CMO_COMPROBA });
-
+        modelBuilder.Entity<DmovInv>()
+         .HasKey(u => new { u.DMO_EMPRESA, u.DMO_CMO_COMPROBA });
 
         modelBuilder.Entity<Devolucion_Cab>()
         .HasKey(u => new { u.DEV_CODIGO });

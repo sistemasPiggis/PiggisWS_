@@ -125,4 +125,60 @@ public class AgenteService: IAgenteService
 
         return response;
     }
+
+
+    public async Task<string> GetUsuarioAsync(decimal agente)
+    {
+        string usuario = string.Empty;
+        try
+        {
+            var usuarios = await _context.USUARIO.Where(w => w.USR_AGENTE == agente).ToListAsync(); 
+            usuario = usuarios.Select(x => x.USR_ID).FirstOrDefault() ?? string.Empty;
+
+            return usuario;
+        }
+        catch (NotFoundException ex)
+        {
+
+            return ex.Message;
+        }
+       
+    }
+
+
+    public async Task<ServiceResponse<object>> GetCodigoAgentexMailAsync(string mail)
+    {
+        decimal codigo = 0;
+        var response = new ServiceResponse<object>();
+        string mailup = mail.ToUpper();
+        string Nombre = string.Empty;
+        try
+        {
+            var agentes = await _context.AGENTE
+                .Where(a => a.AGE_MAIL.ToUpper() == mailup
+            && a.AGE_INACTIVO == 0).ToListAsync();
+            codigo = agentes.Select(c => c.AGE_CODIGO).FirstOrDefault();
+            Nombre = agentes.Select(c => c.AGE_NOMBRE).FirstOrDefault() ?? "AGENTE NO ESTÁ CORRECTAMENTE CONFIGURADO";
+            if (codigo == 0)
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "AGENTE NO ENCONTRADO ";
+                return response;
+            }
+
+            response.Data = codigo;
+            response.Success = true;
+            response.Message = "AGENTE ENCONTRADO EXITOSAMENTE NOMBRE:" + " " + Nombre;
+            return response;
+        }
+        catch (NotFoundException ex)
+        {
+
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los pedidos " + ex.ToString();
+            return response;
+        }
+
+    }
 }
