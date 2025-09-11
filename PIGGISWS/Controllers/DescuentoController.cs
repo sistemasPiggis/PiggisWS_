@@ -6,6 +6,7 @@ using PIGGISWS.Models.Vistas;
 using PIGGISWS.Models;
 using System.CodeDom;
 using Microsoft.AspNetCore.Authorization;
+using PIGGISWS.Models.DTOs;
 
 namespace PIGGISWS.Controllers;
 [ApiController]

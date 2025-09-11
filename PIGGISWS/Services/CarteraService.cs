@@ -12,6 +12,7 @@ using PIGGISWS.Models.Vistas;
 using PIGGISWS.Services.Utils;
 using System.Data;
 using System.Globalization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace PIGGISWS.Services;
 
 public class CarteraService : ICarteraService
@@ -20,7 +21,7 @@ public class CarteraService : ICarteraService
     private readonly ApplicationDbContext _context;
     private readonly IAgenteService _agenteService;
     ServiceResponse<object> respuesta = new ServiceResponse<object>();
-
+    private readonly ILogger<PedidoService> _logger;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
     int p_empresa;
     int p_car_siglafac;
@@ -28,12 +29,13 @@ public class CarteraService : ICarteraService
     int p_dias_anticipo;
     string usuarioAg;
 
-    public CarteraService(ApplicationDbContext context, IAgenteService agenteService)
+    public CarteraService(ApplicationDbContext context, IAgenteService agenteService, ILogger<PedidoService> logger)
     {
         _context = context;
         GetParametros();
         _agenteService = agenteService;
         usuarioAg = string.Empty;
+        _logger = logger;
     }
     public void GetParametros()
     {
@@ -48,6 +50,7 @@ public class CarteraService : ICarteraService
         catch (Exception ex)
         {
             Console.WriteLine(ex.ToString());
+            _logger.LogError(" --------------------- ERROR ------------------ GetParametros() " + ex.ToString());
         }
 
     }
@@ -93,6 +96,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraxFacturaAsync() " + ex.ToString() + cartera);
         }
         return response;
     }
@@ -157,6 +161,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraxFacturaDiaAsync() " + ex.ToString() + cartera);
         }
         return response;
     }
@@ -219,6 +224,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraxFacDiaCliAsync() " + ex.ToString() + cartera + cliente);
         }
         return response;
     }
@@ -273,6 +279,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraxAgenteReporteAsync() " + ex.ToString() + agente);
         }
         return response;
     }
@@ -283,257 +290,157 @@ public class CarteraService : ICarteraService
     public async Task<ServiceResponse<object>> CreateFacturaCarteraAsync(AuxCartera cartera)
     {
         var response = new ServiceResponse<object>();
-
-        decimal agente = cartera.cartera?.CRT_AGENTE ?? 0;
-        usuarioAg = await _agenteService.GetUsuarioAsync(agente);
-
-        if (cartera != null && cartera.cartera != null && cartera.dDocumento != null)
+        try
         {
-            using (var transaction = await _context.Database.BeginTransactionAsync())
+            decimal agente = cartera.cartera?.CRT_AGENTE ?? 0;
+            usuarioAg = await _agenteService.GetUsuarioAsync(agente);
+
+            if (cartera != null && cartera.cartera != null && cartera.dDocumento != null)
             {
-                var facturasr = await _context.CARTERA
-                    .Where(r => r.CRT_NUMERO == cartera.CRT_NUMERO)
-                    .ToListAsync();
-                var ultimafactura =  facturasr
-                    .OrderByDescending(r => r.CRT_SECUENCIA)
-                    .FirstOrDefault();
-
-
-                var reporte = await GetCarteraxAgenteReporteAsync(cartera.cartera.CRT_AGENTE ?? 0);
-
-                if (reporte.Data == null && reporte.Success == true)
+                using (var transaction = await _context.Database.BeginTransactionAsync())
                 {
+                    var facturasr = await _context.CARTERA
+                        .Where(r => r.CRT_NUMERO == cartera.CRT_NUMERO)
+                        .ToListAsync();
+                    var ultimafactura = facturasr
+                        .OrderByDescending(r => r.CRT_SECUENCIA)
+                        .FirstOrDefault();
 
 
+                    var reporte = await GetCarteraxAgenteReporteAsync(cartera.cartera.CRT_AGENTE ?? 0);
 
-                    using(var command = _context.Database.GetDbConnection().CreateCommand())
+                    if (reporte.Data == null && reporte.Success == true)
                     {
-                        command.CommandText = "SELECT CARTERA_S_CRT_NUMERO.NEXTVAL FROM dual";
-                        await _context.Database.OpenConnectionAsync();
-                        var result = await command.ExecuteScalarAsync();
-                        CRT_NUMERO = Convert.ToDecimal(result);
-                    }
 
-                    if (cartera.cartera != null && cartera.dDocumento != null)
-                    {
-                        var _cartera = new Cartera
+
+
+                        using (var command = _context.Database.GetDbConnection().CreateCommand())
                         {
-                            CRT_EMPRESA = cartera.dDocumento.DDO_EMPRESA,
-                            CRT_DDO_COMPROBA = cartera.dDocumento.DDO_CCO_COMPROBA,
-                            CRT_TRANSACC = 1, ////// realizar select
-                            CRT_DOCTRAN = cartera.dDocumento.DDO_DOCTRAN,
-                            CRT_PAGO = cartera.cartera.CRT_PAGO,
-                            CRT_FECHA = cartera.cartera.CRT_FECHA,
-                            CRT_CLIENTE = cartera.dDocumento.DDO_CODCLIPRO,
-                            CRT_AGENTE = cartera.cartera.CRT_AGENTE,
-                            CRT_MONTO = cartera.cartera.CRT_MONTO,
-                            CRT_EMPLEADO = cartera.cartera.CRT_EMPLEADO,
-                            CRT_NUMERO = CRT_NUMERO,
-                            CRT_PROCESADA = null,
-                            CRT_CANCELA = cartera.cartera.CRT_CANCELA,
-                            CRT_CANCELA_CH = cartera.cartera.CRT_CANCELA_CH ?? 0,
-                            CRT_SECUENCIA = 1,
-                            CRT_ESTADO = 1, 
-                            CREA_USR = usuarioAg
-                        };
-
-                        await _context.CARTERA.AddAsync(_cartera);
-                        int carterasave = await _context.SaveChangesAsync();
-
-                        if (carterasave > 0)
-                        {
-
-
-                            var hoy = DateTime.Today;
-                            var ruteros = await _context.RUTERO
-                                .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date 
-                                && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
-
-                            var rutero = ruteros.FirstOrDefault();
-                            if (rutero != null)
-                            {
-                                rutero.RUT_COBRO = 1;
-                                rutero.RUT_VISITA = 1;
-                                await _context.SaveChangesAsync();
-                                await transaction.CommitAsync();
-                            }
-                            else
-                            {
-                                var zonas = await _context.CLIENTE.Where(c => c.CLI_CODIGO == _cartera.CRT_CLIENTE)
-                                            .Select(c => c.CLI_ZONA).ToListAsync();
-                                var zona = zonas.FirstOrDefault();
-                                var nuevoRutero = new Rutero
-                                {
-                                    RUT_CLIENTE = _cartera.CRT_CLIENTE ?? 0,
-                                    RUT_FECHA = hoy.Date,
-                                    RUT_COBRO = 1,
-                                    RUT_VISITA = 1,
-                                    RUT_EMPRESA = p_empresa,
-                                    RUT_ZONA = zona ?? 0,
-                                    RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
-
-                                };
-
-                                await _context.RUTERO.AddAsync(nuevoRutero);
-                                await _context.SaveChangesAsync();
-                                await transaction.CommitAsync();
-                            }
-
-
-
-
-                            await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
-
-
-                            response.Data = _cartera;
-                            response.Success = true;
-                            response.Message = "EL REGISTRO SE GUARDO EXITOSAMENTE";
-                            return response;
+                            command.CommandText = "SELECT CARTERA_S_CRT_NUMERO.NEXTVAL FROM dual";
+                            await _context.Database.OpenConnectionAsync();
+                            var result = await command.ExecuteScalarAsync();
+                            CRT_NUMERO = Convert.ToDecimal(result);
                         }
-                    }
-                }
 
-                else
-                {
-
-                    if (ultimafactura != null) // si existe el reporte 
-                    {
-                        int sec = ultimafactura.CRT_SECUENCIA ?? 1;
-                        decimal tran = ultimafactura.CRT_TRANSACC ?? 0;
-                        var factura = await _context.CARTERA
-                            .Where(c => c.CRT_NUMERO == cartera.CRT_NUMERO && c.CRT_DOCTRAN == cartera.dDocumento.DDO_DOCTRAN)
-                            .ToListAsync(); /// trae la factura repetida
-                        var _factura = factura.FirstOrDefault();
-
-                        if (_factura != null)
+                        if (cartera.cartera != null && cartera.dDocumento != null)
                         {
-                            response.Data = null;
-                            response.Success = true;
-                            response.Message = "EL DOCUMENTO YA ESTA REGISTRADO EN ESTE REPORTE POR FAVOR COMUNICARSE CON EL DEPARTAMENTO DE CARTERA.";
-                            return response;
-                        }
-                        else
-                        {
-                            if (cartera.cartera != null && cartera.dDocumento != null)
+                            var _cartera = new Cartera
                             {
-                                var _cartera = new Cartera
+                                CRT_EMPRESA = cartera.dDocumento.DDO_EMPRESA,
+                                CRT_DDO_COMPROBA = cartera.dDocumento.DDO_CCO_COMPROBA,
+                                CRT_TRANSACC = 1, ////// realizar select
+                                CRT_DOCTRAN = cartera.dDocumento.DDO_DOCTRAN,
+                                CRT_PAGO = cartera.cartera.CRT_PAGO,
+                                CRT_FECHA = cartera.cartera.CRT_FECHA,
+                                CRT_CLIENTE = cartera.dDocumento.DDO_CODCLIPRO,
+                                CRT_AGENTE = cartera.cartera.CRT_AGENTE,
+                                CRT_MONTO = cartera.cartera.CRT_MONTO,
+                                CRT_EMPLEADO = cartera.cartera.CRT_EMPLEADO,
+                                CRT_NUMERO = CRT_NUMERO,
+                                CRT_PROCESADA = null,
+                                CRT_CANCELA = cartera.cartera.CRT_CANCELA,
+                                CRT_CANCELA_CH = cartera.cartera.CRT_CANCELA_CH ?? 0,
+                                CRT_SECUENCIA = 1,
+                                CRT_ESTADO = 1,
+                                CREA_USR = usuarioAg
+                            };
+
+                            await _context.CARTERA.AddAsync(_cartera);
+                            int carterasave = await _context.SaveChangesAsync();
+
+                            if (carterasave > 0)
+                            {
+
+
+                                var hoy = DateTime.Today;
+                                var ruteros = await _context.RUTERO
+                                    .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date
+                                    && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
+
+                                var rutero = ruteros.FirstOrDefault();
+                                if (rutero != null)
                                 {
-                                    CRT_EMPRESA = cartera.dDocumento.DDO_EMPRESA,
-                                    CRT_DDO_COMPROBA = cartera.dDocumento.DDO_CCO_COMPROBA,
-                                    CRT_TRANSACC = tran,   /// obtener de consulta puede ser 1
-                                    CRT_DOCTRAN = cartera.dDocumento.DDO_DOCTRAN,
-                                    CRT_PAGO = cartera.cartera.CRT_PAGO,
-                                    CRT_FECHA = cartera.cartera.CRT_FECHA,
-                                    CRT_CLIENTE = cartera.dDocumento.DDO_CODCLIPRO,
-                                    CRT_AGENTE = cartera.cartera.CRT_AGENTE,
-                                    CRT_MONTO = cartera.dDocumento.DDO_MONTO,
-                                    CRT_EMPLEADO = cartera.cartera.CRT_EMPLEADO,
-                                    CRT_NUMERO = cartera.CRT_NUMERO ?? 0,
-                                    CRT_PROCESADA = null,
-                                    CRT_CANCELA = cartera.cartera.CRT_CANCELA,
-                                    CRT_CANCELA_CH = cartera.cartera.CRT_CANCELA_CH ?? 0,
-                                    CRT_SECUENCIA = sec + 1,
-                                    CRT_ESTADO = 1, 
-                                    CREA_USR = usuarioAg
-                                };
-
-                                await _context.CARTERA.AddAsync(_cartera);
-                                int carterasave = await _context.SaveChangesAsync();
-
-                                if (carterasave > 0)
-                                {
-
-                                    var hoy = DateTime.Today;
-                                    var ruteros = await _context.RUTERO
-                                        .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
-                                    var rutero = ruteros.FirstOrDefault();
-
-                                    if (rutero != null)
-                                    {
-                                        if (usuarioAg != null)
-                                        {
-                                            _cartera.CREA_USR = usuarioAg;
-                                            _context.CARTERA.Update(_cartera);
-                                            await _context.SaveChangesAsync();
-
-                                        }
-                                        rutero.RUT_COBRO = 1;
-                                        rutero.RUT_VISITA = 1;
-                                        await _context.SaveChangesAsync();
-                                        await transaction.CommitAsync();
-                                    }
-                                    else
-                                    {
-                                        var zonas = await _context.CLIENTE.Where(c => c.CLI_CODIGO == _cartera.CRT_CLIENTE)
-                                                         .Select(c => c.CLI_ZONA).ToListAsync();
-                                        var zona = zonas.FirstOrDefault();
-                                        var nuevoRutero = new Rutero
-                                        {
-                                            RUT_CLIENTE = _cartera.CRT_CLIENTE ?? 0,
-                                            RUT_FECHA = hoy.Date,
-                                            RUT_COBRO = 1,
-                                            RUT_VISITA = 1,
-                                            RUT_EMPRESA = p_empresa,
-                                            RUT_ZONA = zona ?? 0,
-                                            RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
-                                        };
-                                        if (usuarioAg != null)
-                                        {
-                                            _cartera.CREA_USR = usuarioAg;
-                                            _context.CARTERA.Update(_cartera);
-                                            await _context.SaveChangesAsync();
-
-                                        }
-
-                                        await _context.RUTERO.AddAsync(nuevoRutero);
-                                        await _context.SaveChangesAsync();
-                                        await transaction.CommitAsync();
-                                    }
-                                    await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
-
-                                    response.Data = _cartera;
-                                    response.Success = true;
-                                    response.Message = "EL REGISTRO SE GUARDO EXITOSAMENTE";
-                                    return response;
+                                    rutero.RUT_COBRO = 1;
+                                    rutero.RUT_VISITA = 1;
+                                    await _context.SaveChangesAsync();
+                                    await transaction.CommitAsync();
                                 }
                                 else
                                 {
-                                    transaction.Rollback();
-                                    response.Data = null;
-                                    response.Success = false;
-                                    response.Message = "Existió un problema por favor vuelva a intentarlo.";
-                                    return response;
+                                    var zonas = await _context.CLIENTE.Where(c => c.CLI_CODIGO == _cartera.CRT_CLIENTE)
+                                                .Select(c => c.CLI_ZONA).ToListAsync();
+                                    var zona = zonas.FirstOrDefault();
+                                    var nuevoRutero = new Rutero
+                                    {
+                                        RUT_CLIENTE = _cartera.CRT_CLIENTE ?? 0,
+                                        RUT_FECHA = hoy.Date,
+                                        RUT_COBRO = 1,
+                                        RUT_VISITA = 1,
+                                        RUT_EMPRESA = p_empresa,
+                                        RUT_ZONA = zona ?? 0,
+                                        RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
+
+                                    };
+
+                                    await _context.RUTERO.AddAsync(nuevoRutero);
+                                    await _context.SaveChangesAsync();
+                                    await transaction.CommitAsync();
                                 }
+
+
+
+
+                                await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
+
+
+                                response.Data = _cartera;
+                                response.Success = true;
+                                response.Message = "EL REGISTRO SE GUARDO EXITOSAMENTE";
+                                return response;
+                            }
+                        }
+                    }
+
+                    else
+                    {
+
+                        if (ultimafactura != null) // si existe el reporte 
+                        {
+                            int sec = ultimafactura.CRT_SECUENCIA ?? 1;
+                            decimal tran = ultimafactura.CRT_TRANSACC ?? 0;
+                            var factura = await _context.CARTERA
+                                .Where(c => c.CRT_NUMERO == cartera.CRT_NUMERO && c.CRT_DOCTRAN == cartera.dDocumento.DDO_DOCTRAN)
+                                .ToListAsync(); /// trae la factura repetida
+                            var _factura = factura.FirstOrDefault();
+
+                            if (_factura != null)
+                            {
+                                response.Data = null;
+                                response.Success = true;
+                                response.Message = "EL DOCUMENTO YA ESTA REGISTRADO EN ESTE REPORTE POR FAVOR COMUNICARSE CON EL DEPARTAMENTO DE CARTERA.";
+                                return response;
                             }
                             else
                             {
-                                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                                {
-                                    command.CommandText = "SELECT CARTERA_S_CRT_NUMERO.NEXTVAL FROM dual;";
-                                    await _context.Database.OpenConnectionAsync();
-                                    var result = await command.ExecuteScalarAsync();
-                                    CRT_NUMERO = Convert.ToInt16(result);
-                                }
-
                                 if (cartera.cartera != null && cartera.dDocumento != null)
                                 {
                                     var _cartera = new Cartera
                                     {
                                         CRT_EMPRESA = cartera.dDocumento.DDO_EMPRESA,
                                         CRT_DDO_COMPROBA = cartera.dDocumento.DDO_CCO_COMPROBA,
-                                        CRT_TRANSACC = 1, ////// realizar select
+                                        CRT_TRANSACC = tran,   /// obtener de consulta puede ser 1
                                         CRT_DOCTRAN = cartera.dDocumento.DDO_DOCTRAN,
                                         CRT_PAGO = cartera.cartera.CRT_PAGO,
                                         CRT_FECHA = cartera.cartera.CRT_FECHA,
                                         CRT_CLIENTE = cartera.dDocumento.DDO_CODCLIPRO,
                                         CRT_AGENTE = cartera.cartera.CRT_AGENTE,
-                                        CRT_MONTO = cartera.cartera.CRT_MONTO,
+                                        CRT_MONTO = cartera.dDocumento.DDO_MONTO,
                                         CRT_EMPLEADO = cartera.cartera.CRT_EMPLEADO,
-                                        CRT_NUMERO = CRT_NUMERO,
+                                        CRT_NUMERO = cartera.CRT_NUMERO ?? 0,
                                         CRT_PROCESADA = null,
                                         CRT_CANCELA = cartera.cartera.CRT_CANCELA,
-                                        CRT_CANCELA_CH= cartera.CRT_CANCELA_CH,
-                                        CRT_SECUENCIA = 1,
+                                        CRT_CANCELA_CH = cartera.cartera.CRT_CANCELA_CH ?? 0,
+                                        CRT_SECUENCIA = sec + 1,
                                         CRT_ESTADO = 1,
                                         CREA_USR = usuarioAg
                                     };
@@ -543,11 +450,12 @@ public class CarteraService : ICarteraService
 
                                     if (carterasave > 0)
                                     {
+
                                         var hoy = DateTime.Today;
                                         var ruteros = await _context.RUTERO
                                             .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
-
                                         var rutero = ruteros.FirstOrDefault();
+
                                         if (rutero != null)
                                         {
                                             if (usuarioAg != null)
@@ -557,15 +465,15 @@ public class CarteraService : ICarteraService
                                                 await _context.SaveChangesAsync();
 
                                             }
-
                                             rutero.RUT_COBRO = 1;
                                             rutero.RUT_VISITA = 1;
                                             await _context.SaveChangesAsync();
+                                            await transaction.CommitAsync();
                                         }
                                         else
                                         {
                                             var zonas = await _context.CLIENTE.Where(c => c.CLI_CODIGO == _cartera.CRT_CLIENTE)
-                                                        .Select(c => c.CLI_ZONA).ToListAsync();
+                                                             .Select(c => c.CLI_ZONA).ToListAsync();
                                             var zona = zonas.FirstOrDefault();
                                             var nuevoRutero = new Rutero
                                             {
@@ -576,7 +484,6 @@ public class CarteraService : ICarteraService
                                                 RUT_EMPRESA = p_empresa,
                                                 RUT_ZONA = zona ?? 0,
                                                 RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
-
                                             };
                                             if (usuarioAg != null)
                                             {
@@ -585,11 +492,11 @@ public class CarteraService : ICarteraService
                                                 await _context.SaveChangesAsync();
 
                                             }
+
                                             await _context.RUTERO.AddAsync(nuevoRutero);
                                             await _context.SaveChangesAsync();
                                             await transaction.CommitAsync();
                                         }
-
                                         await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
 
                                         response.Data = _cartera;
@@ -597,23 +504,133 @@ public class CarteraService : ICarteraService
                                         response.Message = "EL REGISTRO SE GUARDO EXITOSAMENTE";
                                         return response;
                                     }
+                                    else
+                                    {
+                                        transaction.Rollback();
+                                        response.Data = null;
+                                        response.Success = false;
+                                        response.Message = "Existió un problema por favor vuelva a intentarlo.";
+                                        return response;
+                                    }
+                                }
+                                else
+                                {
+                                    using (var command = _context.Database.GetDbConnection().CreateCommand())
+                                    {
+                                        command.CommandText = "SELECT CARTERA_S_CRT_NUMERO.NEXTVAL FROM dual;";
+                                        await _context.Database.OpenConnectionAsync();
+                                        var result = await command.ExecuteScalarAsync();
+                                        CRT_NUMERO = Convert.ToInt16(result);
+                                    }
+
+                                    if (cartera.cartera != null && cartera.dDocumento != null)
+                                    {
+                                        var _cartera = new Cartera
+                                        {
+                                            CRT_EMPRESA = cartera.dDocumento.DDO_EMPRESA,
+                                            CRT_DDO_COMPROBA = cartera.dDocumento.DDO_CCO_COMPROBA,
+                                            CRT_TRANSACC = 1, ////// realizar select
+                                            CRT_DOCTRAN = cartera.dDocumento.DDO_DOCTRAN,
+                                            CRT_PAGO = cartera.cartera.CRT_PAGO,
+                                            CRT_FECHA = cartera.cartera.CRT_FECHA,
+                                            CRT_CLIENTE = cartera.dDocumento.DDO_CODCLIPRO,
+                                            CRT_AGENTE = cartera.cartera.CRT_AGENTE,
+                                            CRT_MONTO = cartera.cartera.CRT_MONTO,
+                                            CRT_EMPLEADO = cartera.cartera.CRT_EMPLEADO,
+                                            CRT_NUMERO = CRT_NUMERO,
+                                            CRT_PROCESADA = null,
+                                            CRT_CANCELA = cartera.cartera.CRT_CANCELA,
+                                            CRT_CANCELA_CH = cartera.CRT_CANCELA_CH,
+                                            CRT_SECUENCIA = 1,
+                                            CRT_ESTADO = 1,
+                                            CREA_USR = usuarioAg
+                                        };
+
+                                        await _context.CARTERA.AddAsync(_cartera);
+                                        int carterasave = await _context.SaveChangesAsync();
+
+                                        if (carterasave > 0)
+                                        {
+                                            var hoy = DateTime.Today;
+                                            var ruteros = await _context.RUTERO
+                                                .Where(r => r.RUT_CLIENTE == _cartera.CRT_CLIENTE && r.RUT_FECHA == hoy.Date && r.RUT_AGENTE == _cartera.CRT_AGENTE).ToListAsync();
+
+                                            var rutero = ruteros.FirstOrDefault();
+                                            if (rutero != null)
+                                            {
+                                                if (usuarioAg != null)
+                                                {
+                                                    _cartera.CREA_USR = usuarioAg;
+                                                    _context.CARTERA.Update(_cartera);
+                                                    await _context.SaveChangesAsync();
+
+                                                }
+
+                                                rutero.RUT_COBRO = 1;
+                                                rutero.RUT_VISITA = 1;
+                                                await _context.SaveChangesAsync();
+                                            }
+                                            else
+                                            {
+                                                var zonas = await _context.CLIENTE.Where(c => c.CLI_CODIGO == _cartera.CRT_CLIENTE)
+                                                            .Select(c => c.CLI_ZONA).ToListAsync();
+                                                var zona = zonas.FirstOrDefault();
+                                                var nuevoRutero = new Rutero
+                                                {
+                                                    RUT_CLIENTE = _cartera.CRT_CLIENTE ?? 0,
+                                                    RUT_FECHA = hoy.Date,
+                                                    RUT_COBRO = 1,
+                                                    RUT_VISITA = 1,
+                                                    RUT_EMPRESA = p_empresa,
+                                                    RUT_ZONA = zona ?? 0,
+                                                    RUT_AGENTE = _cartera.CRT_AGENTE ?? 0
+
+                                                };
+                                                if (usuarioAg != null)
+                                                {
+                                                    _cartera.CREA_USR = usuarioAg;
+                                                    _context.CARTERA.Update(_cartera);
+                                                    await _context.SaveChangesAsync();
+
+                                                }
+                                                await _context.RUTERO.AddAsync(nuevoRutero);
+                                                await _context.SaveChangesAsync();
+                                                await transaction.CommitAsync();
+                                            }
+
+                                            await DesbloquearClienteAsync(usuarioAg, _cartera.CRT_CLIENTE ?? 0);
+
+                                            response.Data = _cartera;
+                                            response.Success = true;
+                                            response.Message = "EL REGISTRO SE GUARDO EXITOSAMENTE";
+                                            return response;
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    response.Data = null;
-                    response.Success = false;
-                    response.Message = "No se encontró el reporte.";
-                    return response;
+                        response.Data = null;
+                        response.Success = false;
+                        response.Message = "No se encontró el reporte.";
+                        return response;
+                    }
                 }
             }
-        }
 
-        response.Data = null;
-        response.Success = false;
-        response.Message = "Los datos proporcionados son nulos.";
-        return response;
+            response.Data = null;
+            response.Success = false;
+            response.Message = "Los datos proporcionados son nulos.";
+            return response;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ CreateFacturaCarteraAsync() " + ex.ToString() + cartera);
+            return response;
+        }
     }
 
 
@@ -664,6 +681,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ CreateFacturaCarteraAsync() " + ex.ToString() + Cliente);
         }
         return response;
     }
@@ -672,6 +690,7 @@ public class CarteraService : ICarteraService
     public async Task<ServiceResponse<object>> GetAnticiposXClienteAsync(decimal Cliente)
     {
         var response = new ServiceResponse<object>();
+        DateTime fechalimite = DateTime.Now.AddDays(-p_dias_anticipo);
         try
         {
             var anticipos = await (from
@@ -694,7 +713,7 @@ public class CarteraService : ICarteraService
 
                                 }
                                ).Where(c => c.DDO_CODCLIPRO == Cliente && c.DDO_DEBCRE == 2 && 
-                               c.DDO_FECHA_EMI >  c.DDO_FECHA_EMI.AddDays(- p_dias_anticipo))
+                               c.DDO_FECHA_EMI > fechalimite)
                                .OrderBy(c => c.DDO_FECHA_EMI)
                                .ToListAsync();
 
@@ -717,6 +736,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetAnticiposXClienteAsync() " + ex.ToString() + Cliente);
         }
         return response;
     }
@@ -750,6 +770,7 @@ public class CarteraService : ICarteraService
         catch (Exception ex)
         {
             Console.WriteLine($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+            _logger.LogError(" --------------------- ERROR ------------------ DesbloquearClienteAsync() " + ex.ToString() + usuario + clienteCodigo);
             throw;
         }
     }
@@ -793,6 +814,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetReportesxAgenteAsync() " + ex.ToString() + agente);
         }
         return response;
     }
@@ -849,6 +871,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetReportexNumeroAsync() " + ex.ToString() + cartera);
         }
         return response;
     }
@@ -897,6 +920,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ CierreReporteAsync() " + ex.ToString() + auxGeneral);
         }
         return response;
     }
@@ -931,8 +955,79 @@ public class CarteraService : ICarteraService
         catch (Exception ex)
         {
             Console.WriteLine($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+            _logger.LogError(" --------------------- ERROR ------------------ EnviaReporteAsync() " + ex.ToString() + numero+ agente);
             throw;
         }
+    }
+
+
+
+    public async Task<ServiceResponse<object>> GetCarteraCompletaAsync(decimal agente)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            
+            var hoy = DateTime.Now;
+
+            var resultado = await( _context.REP_CART_VEN_INT_T
+                .Where(p => p.AGE_CODIGO == agente &&
+                    // primer bloque “normal”
+                    (
+                        (!p.DOC.StartsWith("NCC")
+                            || (p.DOC.StartsWith("NCC")
+                                && p.DDO_FECHA_VEN >= hoy.AddDays(-8)))
+                     && (!p.DOC.StartsWith("REC")
+                            || (p.DOC.StartsWith("REC")
+                                && p.DDO_FECHA_VEN >= hoy.AddDays(-5)))
+                    )
+                    ||
+                    // no muestra “navideños”
+                    (
+                        p.CLI_LISTAPRE == 90000183
+                     && (!p.DOC.StartsWith("NCC")
+                            || (p.DOC.StartsWith("NCC")
+                                && p.DDO_FECHA_VEN >= hoy.AddDays(-90)))
+                     && (!p.DOC.StartsWith("REC")
+                            || (p.DOC.StartsWith("REC")
+                                && p.DDO_FECHA_VEN >= hoy.AddDays(-90)))
+                    )
+                )
+                .Select(p => new {
+                    p.CLI_NOMBRE,
+                    p.CUE_NOMBRE,
+                    p.DOC,
+                    p.DDO_FECHA_EMI,
+                    p.DDO_FECHA_VEN,
+                    p.DDO_MONTO,
+                    p.SALDO
+                })
+                .Distinct()
+                .OrderBy(x => x.CLI_NOMBRE)
+                .ThenBy(x => x.DDO_FECHA_EMI)
+                ).ToListAsync();
+
+
+            if (resultado == null || !resultado.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA DEUDAS PARA EL CLIENTE SELECCIONADO";
+                return response;
+            }
+
+            response.Data = resultado;
+            response.Success = true;
+            response.Message = "DOCUMENTOS ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraCompletaAsync() " + ex.ToString()  + agente);
+        }
+        return response;
     }
 
     #region Notas de Credito
@@ -972,6 +1067,7 @@ public class CarteraService : ICarteraService
             respuesta.Success = false;
             respuesta.Message = ex.ToString();
             respuesta.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNcsAsync() " + ex.ToString() + agente);
         }
         return respuesta;
 
@@ -1045,6 +1141,7 @@ public class CarteraService : ICarteraService
             respuesta.Success = false;
             respuesta.Message = ex.ToString();
             respuesta.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetNcsxCodigoAsync() " + ex.ToString() + codigo);
         }
         return respuesta;
     }
@@ -1075,6 +1172,7 @@ public class CarteraService : ICarteraService
             respuesta.Success = false;
             respuesta.Message = ex.ToString();
             respuesta.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDetalleNcsxCodigoAsync() " + ex.ToString() + codigo);
         }
         return respuesta;
     }
@@ -1135,6 +1233,7 @@ public class CarteraService : ICarteraService
             respuesta.Success = false;
             respuesta.Message = ex.ToString();
             respuesta.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevolicionxCodigoAsync() " + ex.ToString() + codigo);
         }
         return respuesta;
     }
@@ -1165,6 +1264,7 @@ public class CarteraService : ICarteraService
             respuesta.Success = false;
             respuesta.Message = ex.ToString();
             respuesta.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevProductosAproxCodigoAsync() " + ex.ToString() + codigo);
         }
         return respuesta;
     }
@@ -1224,6 +1324,7 @@ public class CarteraService : ICarteraService
             respuesta.Success = false;
             respuesta.Message = ex.ToString();
             respuesta.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevProductosDenxCodigoAsync() " + ex.ToString() + codigo);
         }
         return respuesta;
     }
@@ -1251,6 +1352,10 @@ public class CarteraService : ICarteraService
                     return reader.Value; // Obtiene el valor antes de cerrar la conexión
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ ObtenerNumeroComprobanteAsync() " + ex.ToString() + cco_empresa + cco_codigo);
         }
         finally
         {

@@ -11,7 +11,7 @@ using PIGGISWS.Services.Utils;
 using System;
 using System.Globalization;
 using System.Linq;
-using static Google.Apis.Requests.BatchRequest;
+
 
 namespace PIGGISWS.Services;
 
@@ -49,6 +49,7 @@ public class DevolucionesService : IDevolucionesService
         catch (Exception ex)
         {
             Console.WriteLine(ex.ToString());
+            _logger.LogError(" --------------------- ERROR ------------------ GetParametros() " + ex.ToString());
         }
 
     }
@@ -94,6 +95,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetProDevxClienteAgeAsync() " + ex.ToString() + cliente);
         }
         return response;
     }
@@ -133,6 +135,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetProDevMotivoseAsync() " + ex.ToString());
         }
         return response;
     }
@@ -141,8 +144,9 @@ public class DevolucionesService : IDevolucionesService
     {
         try
         {
-            var result = await _context.DEVOLUCION_EXT.Where(d => d.DEV_SECUENCIAL_MOVIL == dev.DEV_SECUENCIAL_MOVIL 
-                                 ).FirstOrDefaultAsync();
+            var results = await _context.DEVOLUCION_EXT.Where(d => d.DEV_SECUENCIAL_MOVIL == dev.DEV_SECUENCIAL_MOVIL 
+                                 ).ToListAsync();
+            var result = results.FirstOrDefault();
             if (result != null)
             {
                 return true;
@@ -153,7 +157,7 @@ public class DevolucionesService : IDevolucionesService
 
         catch (Exception ex)
         {
-            _logger.LogWarning("Existe un error al validar la devolución: " + ex.ToString());
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaDevolucion() " + ex.ToString() + dev);
             return false;
         }
     }
@@ -163,10 +167,9 @@ public class DevolucionesService : IDevolucionesService
         decimal dev_codigo = 0;
         DateTime fechadev = auxDevolucion.Cabecera?.DEV_FECHA ?? DateTime.Now;
 
-        if (auxDevolucion == null || auxDevolucion.Ext == null || auxDevolucion.Cabecera == null || auxDevolucion.Detalle == null || auxDevolucion.Ext.DEV_SECUENCIAL_MOVIL ==0 || auxDevolucion.Ext.DEV_SECUENCIAL_MOVIL == null)
+        if (auxDevolucion == null || auxDevolucion.Ext == null || auxDevolucion.Cabecera == null || auxDevolucion.Detalle == null )
         {
             if(auxDevolucion?.Ext?.DEV_SECUENCIAL_MOVIL == 0 || auxDevolucion?.Ext?.DEV_SECUENCIAL_MOVIL == null)
-
             {
                 respuesta.Data = null;
                 respuesta.Success = false;
@@ -181,14 +184,7 @@ public class DevolucionesService : IDevolucionesService
             _logger.LogError("Error al guardar devolución: No todos los datos están completos");
             return respuesta;
         }
-        if (await ValidaDevolucion(auxDevolucion.Ext))
-        {
-            respuesta.Success = false;
-            respuesta.Message = "La devolución ya existe";
-            return respuesta;
-        }
-        else
-        {
+ 
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
                 try
@@ -333,11 +329,11 @@ public class DevolucionesService : IDevolucionesService
                     respuesta.Data = null;
                     respuesta.Success = false;
                     respuesta.Message = ex.ToString();
-                    _logger.LogError("ERROR AL GUARDAR DEVOLUCION: " + ex.ToString() );
+                    _logger.LogError("---------------------------------ERROR AL GUARDAR DEVOLUCION: ----------------------" + ex.ToString() );
                     return respuesta;
                 }
             }
-        }
+        
     }
 
 
@@ -351,8 +347,8 @@ public class DevolucionesService : IDevolucionesService
 
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
-        var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-
+        //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
+        var diasPermitidos = new[] { "DOMINGO" };
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
@@ -399,6 +395,8 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+
+            _logger.LogError(" --------------------- ERROR ------------------ GetProDevsxAgeAsync() " + ex.ToString() + agente);
         }
         return response;
     }
@@ -417,7 +415,7 @@ public class DevolucionesService : IDevolucionesService
                                       && ext.DEV_SECUENCIAL_MOVIL != null
                                       orderby ext.DEV_SECUENCIAL_MOVIL descending
                                       select ext.DEV_SECUENCIAL_MOVIL).ToListAsync();
-            decimal ultimosec = Convert.ToInt16(secuenciales.FirstOrDefault());
+            decimal ultimosec = Convert.ToDecimal(secuenciales.FirstOrDefault());
             if (ultimosec == 0)
             {
                 response.Data = 0;
@@ -436,6 +434,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetSecuenciaDevAsync() " + ex.ToString() + agente);
             return response;
         }
     }
@@ -507,6 +506,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevsxAgeAsync() " + ex.ToString() + agente);
         }
         return response;
     }
@@ -580,6 +580,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevxCodigoAsync() " + ex.ToString() + dev);
         }
         return response;
 
@@ -676,6 +677,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevDetxCodigoAsync() " + ex.ToString() + dev);
         }
         return response;
 
@@ -728,6 +730,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevProdApCodigoAsync() " + ex.ToString() + dev);
         }
         return response;
 
@@ -781,6 +784,7 @@ public class DevolucionesService : IDevolucionesService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevProDenCodigoAsync() " + ex.ToString() + dev);
         }
         return response;
 

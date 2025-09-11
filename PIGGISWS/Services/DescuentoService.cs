@@ -37,6 +37,7 @@ public class DescuentoService : IDescuentoService
         }
         catch (Exception ex)
         {
+            _logger.LogError(" --------------------- ERROR ------------------ GetParametros() " + ex.ToString() );
             Console.WriteLine(ex.ToString());
         }
 
@@ -126,7 +127,7 @@ public class DescuentoService : IDescuentoService
             respuesta.Data = descuentos;
             respuesta.Message = "SE RECUPERO LISTA DE DESCUENTOS";
             respuesta.Status = 200;
-            _logger.LogError("SE RECUPERO LISTA DE DESCUENTOS");
+            
             return respuesta;
 
         }
@@ -135,7 +136,7 @@ public class DescuentoService : IDescuentoService
             respuesta.Success = false;
             respuesta.Message = "Error al obtener el descuento";
             respuesta.Status = 500;
-            _logger.LogError(ex, "Error al obtener el descuento");
+            _logger.LogError(" --------------------- ERROR ------------------ GetDescuentoxAgenteAsync() " + ex.ToString());
             return respuesta;
         }
     }

@@ -40,6 +40,8 @@ public class Clientes_Nuevos
     public int TIPO_IDENTIFICACION { get; set; }
     public decimal? LATITUD_NR {  get; set; }
     public decimal? LONGITUD_NR { get; set;}
+    public string? CREA_USR { get; set; }
     public DateTime? CREA_FECHA { get; set; } = DateTime.Now;
-
+    public string? MOD_USR { get; set; }
+    public DateTime? MOD_FECHA { get; set; } = DateTime.Now;
 }

@@ -75,7 +75,35 @@ public class MarcacionService: IMarcacionService
         decimal mar_codigo = 0;
         try
         {
-           
+
+            string FormatearCoordenadas(string coordenadas)
+            {
+                if (string.IsNullOrEmpty(coordenadas))
+                {
+                    return coordenadas;
+                }
+
+
+                var partes = coordenadas.Split(new[] { ", " }, StringSplitOptions.None);
+
+              
+                if (partes.Length == 2)
+                {
+                   
+                    return $"{partes[0].Replace(',', '.')}, {partes[1].Replace(',', '.')}";
+                }
+
+
+                return coordenadas;
+            }
+
+
+            marcacion_Agente.UBICACION1 = FormatearCoordenadas(marcacion_Agente.UBICACION1);
+            marcacion_Agente.UBICACION2 = FormatearCoordenadas(marcacion_Agente.UBICACION2);
+            marcacion_Agente.UBICACION3 = FormatearCoordenadas(marcacion_Agente.UBICACION3);
+            marcacion_Agente.UBICACION4 = FormatearCoordenadas(marcacion_Agente.UBICACION4);
+
+
             var registrosExistente = await _context.TMP_MARCACION_AGENTE
              .Where(x => x.AGE_CODIGO == marcacion_Agente.AGE_CODIGO
                                        && x.MAR_FECHA.Date == marcacion_Agente.MAR_FECHA.Date
@@ -95,26 +123,40 @@ public class MarcacionService: IMarcacionService
 
                 if (!string.IsNullOrEmpty(marcacion_Agente.ENTRADA1_MOVIL))
                 {
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION1))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     marcacion_Agente.ENTRADA1 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.ENTRADA1_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA1_MOVIL).ToString("HH:mm");
 
                 }
                 if (!string.IsNullOrEmpty(marcacion_Agente.SALIDA1_MOVIL))
                 {
-
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION2))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     marcacion_Agente.SALIDA1 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.SALIDA1_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA1_MOVIL).ToString("HH:mm");
 
                 }
                 if (!string.IsNullOrEmpty(marcacion_Agente.ENTRADA2_MOVIL))
                 {
-
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION3))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     marcacion_Agente.ENTRADA2 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.ENTRADA2_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA2_MOVIL).ToString("HH:mm");
                 }
                 if (!string.IsNullOrEmpty(marcacion_Agente.SALIDA2_MOVIL))
                 {
-                   
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION4))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
+
                     marcacion_Agente.SALIDA2 = DateTime.Now.ToString("HH:mm:ss");
                     marcacion_Agente.SALIDA2_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA2_MOVIL).ToString("HH:mm");
                 }
@@ -125,28 +167,45 @@ public class MarcacionService: IMarcacionService
             }
             else
             {
-                // Ya existe registro, actualizamos según los campos que tenga la nueva marcación.
-                if (!string.IsNullOrEmpty(marcacion_Agente.ENTRADA1_MOVIL))
+
+                if (string.IsNullOrEmpty(registroExistente.ENTRADA1_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.ENTRADA1_MOVIL))
+
                 {
-                   
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION1))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     registroExistente.ENTRADA1_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA1_MOVIL).ToString("HH:mm");
                     registroExistente.ENTRADA1 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION1 = marcacion_Agente.UBICACION1;
                 }
-                if (!string.IsNullOrEmpty(marcacion_Agente.SALIDA1_MOVIL))
+                if (string.IsNullOrEmpty(registroExistente.SALIDA1_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.SALIDA1_MOVIL))
+
                 {
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION2))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     registroExistente.SALIDA1_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA1_MOVIL).ToString("HH:mm");
                     registroExistente.SALIDA1 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION2 = marcacion_Agente.UBICACION2;
                 }
-                if (!string.IsNullOrEmpty(marcacion_Agente.ENTRADA2_MOVIL))
+                if (string.IsNullOrEmpty(registroExistente.ENTRADA2_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.ENTRADA2_MOVIL))
                 {
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION3))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     registroExistente.ENTRADA2_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA2_MOVIL).ToString("HH:mm");
                     registroExistente.ENTRADA2 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION3 = marcacion_Agente.UBICACION3;
                 }
-                if (!string.IsNullOrEmpty(marcacion_Agente.SALIDA2_MOVIL))
+                if (string.IsNullOrEmpty(registroExistente.SALIDA2_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.SALIDA2_MOVIL))
                 {
+                    if (string.IsNullOrEmpty(marcacion_Agente.UBICACION4))
+                    {
+                        return new ServiceResponse<object> { Success = false, Message = "REVISE LOS PERMISOS DE LA APP, NO SE HAN INGRESADO COORDENADAS" };
+                    }
                     registroExistente.SALIDA2_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA2_MOVIL).ToString("HH:mm");
                     registroExistente.SALIDA2 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION4 = marcacion_Agente.UBICACION4;
@@ -172,7 +231,7 @@ public class MarcacionService: IMarcacionService
     }
 
 
-    public async Task<ServiceResponse<object>> GetMarcacionesxAgenteAsync(int agente)
+    public async Task<ServiceResponse<object>> GetMarcacionesxAgenteAsync(decimal agente)
     {
         var response = new ServiceResponse<object>();
         DateTime _fecha = DateTime.Now;
@@ -202,6 +261,7 @@ public class MarcacionService: IMarcacionService
             response.Data = null;
             response.Success = false;
             response.Message = "Error al obtener las marcaciones: " + ex.ToString();
+            _logger.LogError("GetMarcacionesxAgenteAsync: " + ex.ToString());
         }
         return response;
     }

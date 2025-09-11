@@ -14,9 +14,11 @@ public class AgenteService: IAgenteService
     ModelResponse model = new ModelResponse();
     Provincia provincia = new Provincia();
     List<Map_Cerca_Agente> lista_mapas = new List<Map_Cerca_Agente>();
-    public AgenteService(ApplicationDbContext context)
+    private readonly ILogger<PedidoService> _logger;
+    public AgenteService(ApplicationDbContext context, ILogger<PedidoService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
 
@@ -42,13 +44,15 @@ public class AgenteService: IAgenteService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetAgentes() " + ex.ToString() );
         }
         catch (Exception ex)
         {
-            // Log the exception details (ex) here as needed
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetAgentes() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
+
         }
 
         return response;
@@ -80,11 +84,13 @@ public class AgenteService: IAgenteService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetAgente() " + ex.ToString() + age_codigo);
         }
         catch (Exception ex)
         {
             response.Success = false;
             response.Message = "Ocurrió un error al obtener del agente.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetAgente() " + ex.ToString() + age_codigo);
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -139,10 +145,15 @@ public class AgenteService: IAgenteService
         }
         catch (NotFoundException ex)
         {
-
+            _logger.LogError(" --------------------- ERROR ------------------ GetAgente() " + ex.ToString() + agente);
             return ex.Message;
         }
-       
+        catch (Exception ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ GetAgente() " + ex.ToString() + agente);
+            return ex.Message;
+        }
+
     }
 
 
@@ -169,7 +180,7 @@ public class AgenteService: IAgenteService
 
             response.Data = codigo;
             response.Success = true;
-            response.Message = "AGENTE ENCONTRADO EXITOSAMENTE NOMBRE:" + " " + Nombre;
+            response.Message = "BIENVENIDO EXISTOS!!! AGENTE:" + " " + Nombre;
             return response;
         }
         catch (NotFoundException ex)
@@ -177,6 +188,7 @@ public class AgenteService: IAgenteService
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los pedidos " + ex.ToString();
+            _logger.LogError(" --------------------- ERROR ------------------ GetCodigoAgentexMailAsync() " + ex.ToString() + mail);
             return response;
         }
 

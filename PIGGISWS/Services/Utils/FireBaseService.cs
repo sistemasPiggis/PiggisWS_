@@ -54,27 +54,57 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
 {
         try
         {
+            var incluidos = new List<decimal> { 90000553, 190001639,
+103,
+104,
+95,
+102,
+101
+ }; 
+
+
             var hoy = DateTime.Today.AddDays(0);
             var oneWeekAgo = DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeMilliseconds();
+            //var marcaciones = (await _firebaseClient
+            //            .Child("marcaciones")
+            //            .OrderBy("Fecha")
+            //            .LimitToLast(900000000)
+            //            .OnceAsync<Marcacion>())
+            //            .Select(item => new Marcacion
+            //            {
+            //                Id = item.Key,
+            //                Fecha = Convert.ToDateTime(item.Key),
+            //                age_codigo = item.Object.age_codigo,
+            //                Ubicacion = $"{item.Object.Latitud},{item.Object.Longitud}",
+            //                Entrada1 = item.Object.Entrada1,
+            //                Salida1 = item.Object.Salida1,
+            //                Entrada2 = item.Object.Entrada2,
+            //                Salida2 = item.Object.Salida2,
+            //                age_id = item.Object.age_id
+            //            })
+            //            .OrderByDescending(m => m.Fecha)
+            //            .ToList();
+
             var marcaciones = (await _firebaseClient
-                        .Child("marcaciones")
-                        .OrderBy("Fecha")
-                        .LimitToLast(900000000)
-                        .OnceAsync<Marcacion>())
-                        .Select(item => new Marcacion
-                        {
-                            Id = item.Key,
-                            Fecha = Convert.ToDateTime(item.Key),
-                            age_codigo = item.Object.age_codigo,
-                            Ubicacion = $"{item.Object.Latitud},{item.Object.Longitud}",
-                            Entrada1 = item.Object.Entrada1,
-                            Salida1 = item.Object.Salida1,
-                            Entrada2 = item.Object.Entrada2,
-                            Salida2 = item.Object.Salida2,
-                            age_id = item.Object.age_id
-                        })
-                        .OrderByDescending(m => m.Fecha)
-                        .ToList();
+                       .Child("marcaciones")
+                       .OrderBy("Fecha")
+                       .LimitToLast(900000)
+                       .OnceAsync<Marcacion>())
+                       .Select(item => new Marcacion
+                       {
+                           Id = item.Key,
+                           Fecha = Convert.ToDateTime(item.Key),
+                           age_codigo = item.Object.age_codigo,
+                           Ubicacion = $"{item.Object.Latitud},{item.Object.Longitud}",
+                           Entrada1 = item.Object.Entrada1,
+                           Salida1 = item.Object.Salida1,
+                           Entrada2 = item.Object.Entrada2,
+                           Salida2 = item.Object.Salida2,
+                           age_id = item.Object.age_id
+                       })
+                       .Where(m => decimal.TryParse(m.age_codigo, out decimal codigo) && incluidos.Contains(codigo))
+                       .OrderByDescending(m => m.Fecha)
+                       .ToList();
 
             if (marcaciones.Any())
             {
@@ -138,11 +168,14 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
         try
         {
             decimal id_marcacion = 0;
+            
+
             foreach (var marcacion in marcaciones)
             {
                 var _marcacionAgente = await _context.TMP_MARCACION_AGENTE
                     .AsNoTracking()
                     .Where(m => m.AGE_CODIGO == Convert.ToDecimal(marcacion.age_codigo)
+                     
                     && m.MAR_FECHA.Date == hoy.Date).ToListAsync();
                 var marcacionAgente = _marcacionAgente.FirstOrDefault();
 
@@ -167,7 +200,7 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
                             {
                                 var valorConvertido = Convert.ChangeType(valorCampo, propiedadMovil.PropertyType);
                                 propiedadMovil.SetValue(marcacionAgente, valorConvertido);
-                                propiedadCampo.SetValue(marcacionAgente, valorConvertido); // Actualizar también el campo sin '_MOVIL'
+                                propiedadCampo.SetValue(marcacionAgente, valorConvertido); 
                             }
 
                             // Asignar Ubicacion

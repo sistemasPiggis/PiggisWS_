@@ -19,6 +19,7 @@ public class ClientesService : IClientesService
 {
     private readonly ApplicationDbContext _context;
     private readonly IEmailService _emailService;
+    private readonly IAgenteService _agenteService;
     // GET: Clienteprivate readonly ApplicationDbContext _context;
     ModelResponse model = new ModelResponse();
     Cliente cliente = new Cliente();
@@ -34,12 +35,13 @@ public class ClientesService : IClientesService
     int p_cli_cupo = 0;
     string p_cli_estado = "";
     string P_CLI_NOT_MAILS;
-    public ClientesService(ApplicationDbContext context, IEmailService emailService)
+    public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService)
     {
         _context = context;
         P_CLI_NOT_MAILS = string.Empty;
         _emailService = emailService;
         GetParametros();
+        _agenteService = agenteService;
     }
 
     public void GetParametros()
@@ -64,8 +66,8 @@ public class ClientesService : IClientesService
 
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
-        var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-
+        //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
+        var diasPermitidos = new[] { "DOMINGO" };
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
@@ -168,8 +170,15 @@ public class ClientesService : IClientesService
         var response = new ServiceResponse<object>();
         int longitud_cedula = clientes_Nuevos.Clientes_Nuevos.CI_RUC.Length;
         int tipo_identificacion;
+        int _ID_SECUENCIA_PK;
 
-        response = await ValidaClienteNuevoxCedRucAsync(clientes_Nuevos.Clientes_Nuevos.CI_RUC);
+        string ageresponse = await _agenteService.GetUsuarioAsync(clientes_Nuevos.Clientes_Nuevos.ID_AGENTE_FK);
+        if (string.IsNullOrEmpty(ageresponse))
+        {
+            ageresponse = "DATA_USR";
+        }
+
+        response = await ValidaClienteNuevoxCedRucAsync(clientes_Nuevos.Clientes_Nuevos.CI_RUC, clientes_Nuevos.Clientes_Nuevos.DIRECCION_ENTREGA);
         if (response.Data != null)
         {
 
@@ -196,9 +205,19 @@ public class ClientesService : IClientesService
             try
             {
 
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = "SELECT CLIENTES_NUEVOS_SEQ.NEXTVAL FROM dual";
+                    await _context.Database.OpenConnectionAsync();
+                    var result = await command.ExecuteScalarAsync();
+                    _ID_SECUENCIA_PK = Convert.ToInt32(result);
+                }
+
+
                 var cliente = new Clientes_Nuevos
                 {
                     ID_EMPRESA_FK = p_empresa,
+                    ID_SECUENCIA_PK = _ID_SECUENCIA_PK,
                     ID_AGENTE_FK = clientes_Nuevos.Clientes_Nuevos.ID_AGENTE_FK,
                     CI_RUC = clientes_Nuevos.Clientes_Nuevos.CI_RUC,
                     NOMBRE_CLIENTE = clientes_Nuevos.Clientes_Nuevos.NOMBRE_CLIENTE,
@@ -216,8 +235,11 @@ public class ClientesService : IClientesService
                     DIRECCION_ENTREGA = clientes_Nuevos.Clientes_Nuevos.DIRECCION_ENTREGA,
                     TIPO_IDENTIFICACION = tipo_identificacion,
                     LATITUD_NR = clientes_Nuevos.Clientes_Nuevos.LATITUD_NR,
-                    LONGITUD_NR = clientes_Nuevos.Clientes_Nuevos.LONGITUD_NR
-
+                    LONGITUD_NR = clientes_Nuevos.Clientes_Nuevos.LONGITUD_NR,
+                    CREA_USR = ageresponse, 
+                    MOD_USR = ageresponse,
+                    CREA_FECHA = DateTime.Now, 
+                    
                 };
 
                 _context.CLIENTES_NUEVOS.Add(cliente);
@@ -231,19 +253,31 @@ public class ClientesService : IClientesService
                     response.Success = false;
                 }
 
-
+               
 
                 foreach (var nuevoCliente in clientes_Nuevos.Cliente_Dia_Gestion_Nuevo)
                 {
+                    using (var command = _context.Database.GetDbConnection().CreateCommand())
+                    {
+                        command.CommandText = "SELECT CLIENTE_DIA_GESTION_NUEVO_SEQ.NEXTVAL FROM dual";
+                        await _context.Database.OpenConnectionAsync();
+                        var result = await command.ExecuteScalarAsync();
+                        _ID_SECUENCIA_PK = Convert.ToInt32(result);
+                    }
                     var nuevoClienteDia = new Cliente_Dia_Gestion_Nuevo
                     {
+                        ID_SECUENCIA_PK = _ID_SECUENCIA_PK,
                         ID_EMPRESA_FK = p_empresa,
                         TIPO_GESTION_TX = nuevoCliente.TIPO_GESTION_TX,
                         ID_CLIENTE_NUEVO_FK = cliente.CI_RUC,
                         DIA_NR = nuevoCliente.DIA_NR,
                         INACTIVO_NR = nuevoCliente.INACTIVO_NR,
                         DIRECCION_CLIENTE = nuevoCliente.DIRECCION_CLIENTE,
-                        DIRECCION_ENTREGA = nuevoCliente.DIRECCION_ENTREGA
+                        DIRECCION_ENTREGA = nuevoCliente.DIRECCION_ENTREGA, 
+                        CREA_FECHA = DateTime.Now,
+                        CREA_USR = ageresponse,
+                        MOD_FECHA = DateTime.Now,
+                        MOD_USR = ageresponse
                     };
 
                     listaClientesDia.Add(nuevoClienteDia);
@@ -261,7 +295,7 @@ public class ClientesService : IClientesService
             }
             catch (Exception ex)
             {
-                response.Message += "NO SE PUDO CREAR EL CLIENTE" + ex.Message;
+                response.Message += "NO SE PUDO CREAR EL CLIENTE " + ex.Message;
                 response.Data = null;
                 response.Success = true;
                 return response;
@@ -678,14 +712,14 @@ public class ClientesService : IClientesService
         try
         {
             var clientes = await (from cl in _context.CLIENTE
-                                  join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
-                                  join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                                  //join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                                  //join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
                                   //join cd in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd.CDI_CLIENTE into cdGroup
                                   //from cd in cdGroup.DefaultIfEmpty()
                                   where cl.CLI_EMPRESA == p_empresa
                                         && cl.CLI_TIPO == p_cli_Tipo
-                                        && cl.CLI_INACTIVO == p_cli_Inactivo
-                                        && cl.CLI_BLOQUEO == p_cli_Bloqueo
+                                        //&& cl.CLI_INACTIVO == p_cli_Inactivo
+                                        //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
                                         && cl.CLI_RUC_CEDULA == cedruc
                                   select new
                                   {
@@ -713,6 +747,7 @@ public class ClientesService : IClientesService
             response.Data = cliente;
             response.Success = true;
             response.Message = "Clientes encontrados exitosamente.";
+            response.Status = 500; // Ya existe el cliente con esa cédula o ruc
         }
         catch (NotFoundException ex)
         {
@@ -731,7 +766,7 @@ public class ClientesService : IClientesService
     }
 
 
-    public async Task<ServiceResponse<object>> ValidaClienteNuevoxCedRucAsync(string cedruc)
+    public async Task<ServiceResponse<object>> ValidaClienteNuevoxCedRucAsync(string cedruc, string direntrega)
     {
 
         // Crea un objeto CultureInfo en español
@@ -742,19 +777,34 @@ public class ClientesService : IClientesService
         try
         {
             var clientes = await (from cl in _context.CLIENTES_NUEVOS
-                                  where cl.CI_RUC == cedruc
+                                  where cl.CI_RUC == cedruc && cl.DIRECCION_ENTREGA == direntrega
                                   select new Clientes_Nuevos
                                   {
                                       CI_RUC = cl.CI_RUC,
-                                      NOMBRE_CLIENTE = cl.NOMBRE_CLIENTE
-
+                                      NOMBRE_CLIENTE = cl.NOMBRE_CLIENTE,
+                                      DIRECCION_ENTREGA = cl.DIRECCION_ENTREGA
 
                                   })
                                    .ToListAsync();
-
+            ///////////////////////////////////////// SI NO HAY EN CLIENTES NUEVO DEBE VERIFICAR EN LA TABLA CLIENTE  ////////////////
 
             var cliente = clientes.FirstOrDefault();
 
+
+            if (cliente == null)
+            {
+                var cliente_ = await (from cl in _context.CLIENTE
+                                 where cl.CLI_RUC_CEDULA == cedruc && cl.CLI_DIR_ENTREGA == direntrega
+                                 select new Clientes_Nuevos
+                                 {
+                                     CI_RUC = cl.CLI_RUC_CEDULA,
+                                     NOMBRE_CLIENTE = cl.CLI_NOMBRECOM,
+                                     DIRECCION_ENTREGA = cl.CLI_DIR_ENTREGA
+                                 })
+                                 .ToListAsync();
+                cliente = cliente_.FirstOrDefault();
+            }
+            
             if (cliente == null)
             {
                 response.Data = null;
@@ -765,7 +815,8 @@ public class ClientesService : IClientesService
 
             response.Data = cliente;
             response.Success = true;
-            response.Message = cliente.NOMBRE_CLIENTE + " ya se encuentra registrado como cliente nuevo.";
+            response.Message = cliente.NOMBRE_CLIENTE + " ya se encuentra registrado como cliente, PUEDE CREARLO CAMBIANDO LA DIRECCIÓN DE ENTREGA";
+            response.Status = 500; // Ya existe el cliente con esa cédula o ruc
         }
         catch (NotFoundException ex)
         {

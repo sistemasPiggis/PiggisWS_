@@ -112,7 +112,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<REP_PEDIDOS_INT_X_DAPP> REP_PEDIDOS_INT_X_DAPP { get; set; }
     public DbSet<Tmp_Dev_Pro_Cli_Age> TMP_DEV_PROD_CLI_AGE { get; set; }
     public DbSet<REP_DET_ESTADO_DESPACHO_PED> REP_DET_ESTADO_DESPACHO_PED { get; set; }
-
+    public DbSet<REP_CART_VEN_INT_T> REP_CART_VEN_INT_T { get; set; }
+    
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -165,7 +166,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<REP_CANTIDADES_VENTAS_2009>().ToTable("REP_CANTIDADES_VENTAS_2009").HasKey(a => new { a.DOC, a.PRO_NOMBRE, a.TOTAL_LIBRAS });
         modelBuilder.Entity<REP_PEDIDOS_INT_X_DAPP>().ToTable("REP_PEDIDOS_INT_X_DAPP").HasKey(a => new { a.DOC, a.CCO_AGENTE, a.CANTIDAD_KILOS });
         modelBuilder.Entity<REP_DET_ESTADO_DESPACHO_PED>().ToTable("REP_DET_ESTADO_DESPACHO_PED").HasKey(a => new { a.FAC, a.ESTADO_DESPACHO, a.CLI_NOMBRE });
-
+        modelBuilder.Entity<REP_CART_VEN_INT_T>().ToTable("REP_CART_VEN_INT_T").HasKey(a => new { a.DOC, a.AGE_CODIGO, a.CLI_CLAVE });
         #endregion
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);

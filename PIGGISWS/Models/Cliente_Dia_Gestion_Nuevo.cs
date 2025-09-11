@@ -11,5 +11,9 @@ public class Cliente_Dia_Gestion_Nuevo
     public int INACTIVO_NR { get; set; } = 0;
     public string DIRECCION_CLIENTE { get; set; }  =string.Empty;
     public string DIRECCION_ENTREGA { get; set; } = string.Empty;
+    public string? CREA_USR { get; set; }
+    public DateTime? CREA_FECHA { get; set; } = DateTime.Now;
+    public string? MOD_USR { get; set; }
+    public DateTime? MOD_FECHA { get; set; } = DateTime.Now;
 
 }

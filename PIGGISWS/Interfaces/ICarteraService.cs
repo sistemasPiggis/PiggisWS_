@@ -28,4 +28,6 @@ public interface ICarteraService
     Task<ServiceResponse<object>> GetReportexNumeroAsync(Cartera cartera);
 
     Task<ServiceResponse<object>> CierreReporteAsync(AuxGeneral auxGeneral);
+
+    Task<ServiceResponse<object>> GetCarteraCompletaAsync(decimal agente);
 }

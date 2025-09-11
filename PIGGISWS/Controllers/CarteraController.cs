@@ -300,4 +300,20 @@ public class CarteraController : ControllerBase
     }
 
 
+    [Authorize]
+    [HttpPost("GetCarteraCompletaAsync")]
+
+    public async Task<IActionResult> GetCarteraCompletaAsync([FromBody] decimal agente)
+    {
+        var response = await _carteraService.GetCarteraCompletaAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
 }

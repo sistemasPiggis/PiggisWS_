@@ -141,8 +141,8 @@ public class ProductoService : IProductoService
 
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
-        var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-
+        //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
+        var diasPermitidos = new[] {  "DOMINGO" };
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
 

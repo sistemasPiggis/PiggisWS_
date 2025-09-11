@@ -73,6 +73,10 @@ public class ClienteController : ControllerBase
 
         if (response.Success)
         {
+            if (response.Status == 500)
+            {
+                return Ok(response);
+            }
             response.Status = Response.StatusCode;
             return Ok(response);
         }
