@@ -91,7 +91,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Lst_Productos_Apr_Ncc> LST_PRODUCTOS_APR_NCC { get; set; }
 
     public DbSet<Vl_Ncc_Idc_ldv> VL_NCC_IDC_LDV { get; set; }
-    public DbSet<Rep_Ventas_Int_60> REP_VENTAS_INT_60 { get; set; }
+    public DbSet<REP_VENTAS_INT_PARAM> REP_VENTAS_INT_PARAM { get; set; }
 
     public DbSet<Rep_Motivos_Dev> REP_MOTIVOS_DEV { get; set; }
     public DbSet<Cmovinv> CMOVINV { get; set; }
@@ -155,7 +155,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Vl_Ncc_Idc_ldv>().ToTable("VL_NCC_IDC_LDV").HasKey(a => new { a.ID_EMPRESA_NR, a.TOTAL_NOTA_CREDITO, a.NUMERO_NOTA_CREDITO, a.NUMERO_IDC, a.NUMERO_FACTURA, a.NUMERO_LDV });
         modelBuilder.Entity<Lst_Productos_Apr_Ncc>().ToTable("LST_PRODUCTOS_APR_NCC").HasKey(a => new { a.CCO_EMPRESA, a.CCO_CODIGO, a.ID, a.VALOR });
 
-        modelBuilder.Entity<Rep_Ventas_Int_60>().ToTable("REP_VENTAS_INT_60").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO, a.UMD_ID });
+        modelBuilder.Entity<REP_VENTAS_INT_PARAM>().ToTable("REP_VENTAS_INT_PARAM").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO, a.UMD_ID });
         modelBuilder.Entity<Rep_Motivos_Dev>().ToTable("REP_MOTIVOS_DEV").HasKey(a => new { a.TDE_CODIGO });
 
         modelBuilder.Entity<Cc_Est_Perididos>().ToTable("CC_EST_PEDIDOS").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });

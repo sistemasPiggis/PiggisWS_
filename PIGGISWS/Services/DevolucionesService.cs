@@ -61,7 +61,7 @@ public class DevolucionesService : IDevolucionesService
         try
         {
             var result = await (
-                                from rv in _context.REP_VENTAS_INT_60
+                                from rv in _context.REP_VENTAS_INT_PARAM
                                 join cl in _context.CLIENTE on rv.CCO_CODCLIPRO equals cl.CLI_CODIGO
                                 where cl.CLI_AGENTE == cliente.CLI_AGENTE && rv.CCO_CODCLIPRO == cliente.CLI_CODIGO
                                 select new
@@ -355,7 +355,7 @@ public class DevolucionesService : IDevolucionesService
         try
         {
             var result = await (
-                                from rv in _context.REP_VENTAS_INT_60
+                                from rv in _context.REP_VENTAS_INT_PARAM
                                 join cl in _context.CLIENTE on rv.CCO_CODCLIPRO equals cl.CLI_CODIGO
                                 join cd in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd.CDI_CLIENTE
                                 where cl.CLI_AGENTE == agente && cl.CLI_INACTIVO ==0
@@ -370,7 +370,9 @@ public class DevolucionesService : IDevolucionesService
                                     rv.PRO_ID,
                                     rv.UMD_CODIGO,
                                     rv.UMD_ID,
-                                    rv.CCO_CODCLIPRO
+                                    rv.CCO_CODCLIPRO, 
+
+                                    rv .FAC_CANTIDAD_ORIGINAL
                                 })
                                 .Distinct()
                                 .OrderBy(x => x.PRO_ID)
