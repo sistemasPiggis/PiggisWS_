@@ -209,4 +209,21 @@ public class ClienteController : ControllerBase
 
         return BadRequest(response.Message);
     }
+
+
+
+    [Authorize]
+    [HttpPost("GetClientesNavidadxAgente")]
+    public async Task<IActionResult> GetClientesNavidadxAgente([FromBody] decimal agente)
+    {
+        var response = await _clientesService.GetClientesNavidadxAgente(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
 }

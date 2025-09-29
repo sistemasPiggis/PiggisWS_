@@ -19,6 +19,8 @@ public class ProductoService : IProductoService
     //int p_cli_Tipo = 0;
     //int p_cli_Bloqueo = 0;
     int p_cli_Inactivo = 0;
+    string p_nav_CPR_ID = string.Empty;
+    decimal p_nav_GPR_CODIGO = 0;
     //int p_cli_cupo = 0;
     //string p_cli_estado = "";
     public ProductoService(ApplicationDbContext context)
@@ -32,6 +34,8 @@ public class ProductoService : IProductoService
         parametros = _context.PARAMETROS_MOVIL.Where(p => p.SERVICIO == "ProductoService" || p.SERVICIO == "GENERAL").ToList();
         p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
         p_cli_Inactivo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 6)?.VALOR ?? "0");
+        p_nav_CPR_ID = parametros.FirstOrDefault(p => p.CODIGO == 58)?.VALOR ?? "0";
+        p_nav_GPR_CODIGO = Convert.ToDecimal(parametros.FirstOrDefault(p => p.CODIGO == 59)?.VALOR ?? "0");
     }
 
 
@@ -259,4 +263,60 @@ public class ProductoService : IProductoService
 
 
     }
+
+
+
+    #region Pedidos Navidad
+
+
+    public async Task<ServiceResponse<object>> GetProductosNavidad()
+    {
+
+        var response = new ServiceResponse<object>();
+
+        try
+        {
+
+            var productos = await (from p in _context.PRODUCTO
+                             join cp in _context.CLASIFPROD on p.PRO_CLASIFICACION equals cp.CPR_CODIGO
+                             join gp in _context.GPRODUCTO on p.PRO_GPRODUCTO equals gp.GPR_CODIGO
+                             where p.PRO_INACTIVO == 0
+                                   && cp.CPR_ID == p_nav_CPR_ID
+                                   && gp.GPR_CODIGO != p_nav_GPR_CODIGO
+                             orderby p.PRO_NOMBRE ascending
+                             select new
+                             {
+                                 PRO_NOMBRE = p.PRO_ID + " - " + p.PRO_NOMBRE,
+                                 PRO_CODIGO = p.PRO_CODIGO
+                             }).ToListAsync();
+
+
+            if (productos == null || !productos.Any())
+            {
+                response.Data = productos;
+                response.Success = true;
+                response.Message = "No se Encontraron Productos Navideños";
+            }
+
+            response.Data = productos;
+            response.Success = true;
+            response.Message = "Productos Navideños Encontrados Exitosamente.";
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los Productos.";
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
+    }
+
+    #endregion
 }

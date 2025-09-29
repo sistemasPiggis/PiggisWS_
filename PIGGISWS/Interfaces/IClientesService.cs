@@ -18,4 +18,6 @@ public interface IClientesService
     Task<ServiceResponse<object>> GetPedidosDesxClienteAsync(AuxGeneral auxGeneral);
     Task<ServiceResponse<object>> GetClientesNuevos(decimal agente);
     Task<ServiceResponse<object>> GetClienteBloqueoAsync(decimal Cod_cliente);
+
+    Task<ServiceResponse<object>> GetClientesNavidadxAgente(decimal agente);
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PIGGISWS.Interfaces;
+using PIGGISWS.Models.Auxiliares;
 using PIGGISWS.Services;
 
 namespace PIGGISWS.Controllers;
@@ -40,6 +41,21 @@ public class ProductoController : ControllerBase
     public async Task<IActionResult> GetTopProductosxAgente(int agente)
     {
         var response = await _productoservice.GetTopProductosxAgente(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+    [Authorize]
+    [HttpPost("GetProductosNavidad")]
+
+    public async Task<IActionResult> GetProductosNavidad([FromBody] AuxPedido auxPedido)
+    {
+        var response = await _productoservice.GetProductosNavidad();
 
         if (response.Success)
         {

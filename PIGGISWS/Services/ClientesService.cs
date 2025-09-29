@@ -35,6 +35,8 @@ public class ClientesService : IClientesService
     int p_cli_cupo = 0;
     string p_cli_estado = "";
     string P_CLI_NOT_MAILS;
+    string P_LISTA_PNAV = "";
+    int P_NAVIDAD = 0;
     public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService)
     {
         _context = context;
@@ -54,6 +56,8 @@ public class ClientesService : IClientesService
         p_cli_cupo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 7)?.VALOR ?? "0");
         p_cli_estado = parametros.First(p => p.CODIGO == 8)?.VALOR ?? "";
         P_CLI_NOT_MAILS = parametros.First(p => p.CODIGO == 19)?.VALOR ?? "";
+        P_LISTA_PNAV = parametros.First(p => p.CODIGO == 61)?.VALOR ?? "";
+        P_NAVIDAD = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 60)?.VALOR ?? "0");
     }
 
 
@@ -72,60 +76,85 @@ public class ClientesService : IClientesService
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
 
+
+
+
+        var preciosPermitidosNav = new HashSet<decimal>();
+        if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+        {
+            preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                               .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                               .Where(d => d.HasValue)
+                                               .Select(d => d.Value)
+                                               .ToHashSet();
+        }
+
+
+
         try
         {
-            var clientes = await (from cl in _context.CLIENTE
-                                  join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
-                                  join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
-                                  join cd in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd.CDI_CLIENTE
-                                  where cl.CLI_EMPRESA == p_empresa
-                                        && cl.CLI_TIPO == p_cli_Tipo
-                                        && cl.CLI_INACTIVO == p_cli_Inactivo
-                                        //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
-                                        && cl.CLI_AGENTE == agente
-                                        && (
-                                            diasPermitidos.Contains(dayformateado)
-                                            || cd.CDI_DIA == dayformateado
-                                        )
-                                  select new ClienteDto
-                                  {
-                                      CLI_EMPRESA = cl.CLI_EMPRESA,
-                                      CLI_CODIGO = cl.CLI_CODIGO,
-                                      CLI_NOMBRE = cl.CLI_NOMBRE,
-                                      CLI_AGENTE = cl.CLI_AGENTE,
-                                      CLI_ID = cl.CLI_ID,
-                                      CLI_LISTAPRE = cl.CLI_LISTAPRE ?? 0,
-                                      CLI_ILIMITADOF = cl.CLI_ILIMITADO ?? 0,
-                                      CLI_ZONA = cl.CLI_ZONA ?? 0,
-                                      CDI_DIA = cd != null ? cd.CDI_DIA : null,
-                                      CLI_TELEFONO1 = cl.CLI_TELEFONO1,
-                                      CLI_POLITICAS = cl.CLI_POLITICAS,
-                                      CLI_DIRECCION = cl.CLI_DIRECCION,
-                                      CLI_DIR_ENTREGA = cl.CLI_DIR_ENTREGA,
-                                      CLI_NOMBRECOM = cl.CLI_NOMBRECOM,
-                                      CLI_MAIL = cl.CLI_MAIL,
-                                      CLI_RUC_CEDULA = cl.CLI_RUC_CEDULA,
-                                      ID_PROVINCIA_FK = ce.ID_PROVINCIA_FK ?? 0,
-                                      ID_CANTON_FK = ce.ID_CANTON_FK ?? 0,
-                                      CLI_ESTABLECIMIENTO = cl.CLI_ESTABLECIMIENTO,
-                                      POL_PORC_DESC = p.POL_PORC_DESC,
-                                      POL_PORC_FINANC = p.POL_PORC_FINANC,
-                                      POL_PORC_PRO_PAGO = p.POL_PORC_PRO_PAGO,
-                                      POL_PORC_PAG_CONTA = p.POL_PORC_PAG_CONTA,
-                                      POL_LINEA_CREDITO = p.POL_LINEA_CREDITO,
-                                      POL_DIAS_PLAZO = p.POL_DIAS_PLAZO,
-                                      POL_NRO_PAGOS = p.POL_NRO_PAGOS,
-                                      CLI_PARROQUIA = cl.CLI_PARROQUIA,
-                                      CUPO = cl.CLI_CUPO,
-                                      CLI_BLOQUEO = cl.CLI_BLOQUEO ?? 0,
-                                      CLI_LATITUD_NR = ce.CLI_LATITUD_NR ?? 0M,
-                                      CLI_LONGITUD_NR = ce.CLI_LONGITUD_NR ?? 0M,
-                                      CLI_LATITUD1_NR = ce.CLI_LATITUD1_NR ?? 0M,
-                                      CLI_LONGITUD1_NR = ce.CLI_LONGITUD1_NR ?? 0M
 
-                                  })
-                 .OrderBy(x => x.CLI_NOMBRE)
-                 .ToListAsync();
+            var query = from cl in _context.CLIENTE
+                        join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                        join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                        // LEFT JOIN con CLIENTE_DIA para evitar duplicados
+                        join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
+                        from cd in cd_group.DefaultIfEmpty()
+                        where cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_TIPO == p_cli_Tipo
+                              && cl.CLI_INACTIVO == p_cli_Inactivo
+
+                              //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
+                              && cl.CLI_AGENTE == agente
+                              && (
+                                  diasPermitidos.Contains(dayformateado)
+                                  || cd.CDI_DIA == dayformateado
+                              )
+
+                            && (preciosPermitidosNav.Count == 0 || !preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
+                        // Agrupamos por cliente para obtener resultados únicos
+                        group new { cl, p, ce, cd } by new { cl.CLI_CODIGO, cl.CLI_NOMBRE, cl.CLI_AGENTE, cl.CLI_ID, cl.CLI_LISTAPRE, cl.CLI_ILIMITADO, cl.CLI_ZONA, cl.CLI_TELEFONO1, cl.CLI_POLITICAS, cl.CLI_DIRECCION, cl.CLI_DIR_ENTREGA, cl.CLI_NOMBRECOM, cl.CLI_MAIL, cl.CLI_RUC_CEDULA, ce.ID_PROVINCIA_FK, ce.ID_CANTON_FK, cl.CLI_ESTABLECIMIENTO, p.POL_PORC_DESC, p.POL_PORC_FINANC, p.POL_PORC_PRO_PAGO, p.POL_PORC_PAG_CONTA, p.POL_LINEA_CREDITO, p.POL_DIAS_PLAZO, p.POL_NRO_PAGOS, cl.CLI_PARROQUIA, cl.CLI_CUPO, cl.CLI_BLOQUEO, ce.CLI_LATITUD_NR, ce.CLI_LONGITUD_NR, ce.CLI_LATITUD1_NR, ce.CLI_LONGITUD1_NR } into g
+                        select new ClienteDto
+                        {
+                            // Tomamos los datos de la clave de agrupación (g.Key)
+                            CLI_EMPRESA = p_empresa, // O desde donde corresponda
+                            CLI_CODIGO = g.Key.CLI_CODIGO,
+                            CLI_NOMBRE = g.Key.CLI_NOMBRE,
+                            CLI_AGENTE = g.Key.CLI_AGENTE,
+                            CLI_ID = g.Key.CLI_ID,
+                            CLI_LISTAPRE = g.Key.CLI_LISTAPRE ?? 0,
+                            CLI_ILIMITADOF = g.Key.CLI_ILIMITADO ?? 0,
+                            CLI_ZONA = g.Key.CLI_ZONA ?? 0,
+                            // Si es un día permitido, se asigna ese día. Si no, se busca si el cliente tiene visita ese día.
+                            CDI_DIA = diasPermitidos.Contains(dayformateado) ? dayformateado : (g.FirstOrDefault(x => x.cd != null && x.cd.CDI_DIA == dayformateado) != null ? dayformateado : null),
+                            CLI_TELEFONO1 = g.Key.CLI_TELEFONO1,
+                            CLI_POLITICAS = g.Key.CLI_POLITICAS,
+                            CLI_DIRECCION = g.Key.CLI_DIRECCION,
+                            CLI_DIR_ENTREGA = g.Key.CLI_DIR_ENTREGA,
+                            CLI_NOMBRECOM = g.Key.CLI_NOMBRECOM,
+                            CLI_MAIL = g.Key.CLI_MAIL,
+                            CLI_RUC_CEDULA = g.Key.CLI_RUC_CEDULA,
+                            ID_PROVINCIA_FK = g.Key.ID_PROVINCIA_FK ?? 0,
+                            ID_CANTON_FK = g.Key.ID_CANTON_FK ?? 0,
+                            CLI_ESTABLECIMIENTO = g.Key.CLI_ESTABLECIMIENTO,
+                            POL_PORC_DESC = g.Key.POL_PORC_DESC,
+                            POL_PORC_FINANC = g.Key.POL_PORC_FINANC,
+                            POL_PORC_PRO_PAGO = g.Key.POL_PORC_PRO_PAGO,
+                            POL_PORC_PAG_CONTA = g.Key.POL_PORC_PAG_CONTA,
+                            POL_LINEA_CREDITO = g.Key.POL_LINEA_CREDITO,
+                            POL_DIAS_PLAZO = g.Key.POL_DIAS_PLAZO,
+                            POL_NRO_PAGOS = g.Key.POL_NRO_PAGOS,
+                            CLI_PARROQUIA = g.Key.CLI_PARROQUIA,
+                            CUPO = g.Key.CLI_CUPO,
+                            CLI_BLOQUEO = g.Key.CLI_BLOQUEO ?? 0,
+                            CLI_LATITUD_NR = g.Key.CLI_LATITUD_NR ?? 0M,
+                            CLI_LONGITUD_NR = g.Key.CLI_LONGITUD_NR ?? 0M,
+                            CLI_LATITUD1_NR = g.Key.CLI_LATITUD1_NR ?? 0M,
+                            CLI_LONGITUD1_NR = g.Key.CLI_LONGITUD1_NR ?? 0M
+
+                        };
+
+            var clientes = await query.OrderBy(x => x.CLI_NOMBRE).ToListAsync();
 
 
             if (clientes == null || !clientes.Any())
@@ -1063,6 +1092,134 @@ public class ClientesService : IClientesService
         }
 
        
+    }
+
+
+
+    public async Task<ServiceResponse<object>> GetClientesNavidadxAgente(decimal agente)
+    {
+        GetParametros();
+        if (P_NAVIDAD == 0)
+        {             
+            var responseNoNav = new ServiceResponse<object>();
+            responseNoNav.Data = null;
+            responseNoNav.Success = true;
+            responseNoNav.Message = "No está activada la opción de Navidad.";
+            return responseNoNav;
+        }
+
+        var response = new ServiceResponse<object>();
+
+
+
+
+        var preciosPermitidosNav = new HashSet<decimal>();
+        if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+        {
+            preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                               .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                               .Where(d => d.HasValue)
+                                               .Select(d => d.Value)
+                                               .ToHashSet();
+        }
+
+
+
+        try
+        {
+
+            var query = from cl in _context.CLIENTE
+                        join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                        join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                        // LEFT JOIN con CLIENTE_DIA para evitar duplicados
+                        join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
+                        from cd in cd_group.DefaultIfEmpty()
+                        where cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_TIPO == p_cli_Tipo
+                              && cl.CLI_INACTIVO == p_cli_Inactivo
+
+                              //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
+                              && cl.CLI_AGENTE == agente
+
+                            && (preciosPermitidosNav.Count == 0 || preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
+                        // Agrupamos por cliente para obtener resultados únicos
+                        group new { cl, p, ce, cd } by new { cl.CLI_CODIGO, cl.CLI_NOMBRE, cl.CLI_AGENTE, cl.CLI_ID, cl.CLI_LISTAPRE, cl.CLI_ILIMITADO, cl.CLI_ZONA, cl.CLI_TELEFONO1, cl.CLI_POLITICAS, cl.CLI_DIRECCION, cl.CLI_DIR_ENTREGA, cl.CLI_NOMBRECOM, cl.CLI_MAIL, cl.CLI_RUC_CEDULA, ce.ID_PROVINCIA_FK, ce.ID_CANTON_FK, cl.CLI_ESTABLECIMIENTO, p.POL_PORC_DESC, p.POL_PORC_FINANC, p.POL_PORC_PRO_PAGO, p.POL_PORC_PAG_CONTA, p.POL_LINEA_CREDITO, p.POL_DIAS_PLAZO, p.POL_NRO_PAGOS, cl.CLI_PARROQUIA, cl.CLI_CUPO, cl.CLI_BLOQUEO, ce.CLI_LATITUD_NR, ce.CLI_LONGITUD_NR, ce.CLI_LATITUD1_NR, ce.CLI_LONGITUD1_NR } into g
+                        select new ClienteDto
+                        {
+                            
+                            CLI_EMPRESA = p_empresa,
+                            CLI_CODIGO = g.Key.CLI_CODIGO,
+                            CLI_NOMBRE = g.Key.CLI_NOMBRE,
+                            CLI_AGENTE = g.Key.CLI_AGENTE,
+                            CLI_ID = g.Key.CLI_ID,
+                            CLI_LISTAPRE = g.Key.CLI_LISTAPRE ?? 0,
+                            CLI_ILIMITADOF = g.Key.CLI_ILIMITADO ?? 0,
+                            CLI_ZONA = g.Key.CLI_ZONA ?? 0,
+                            CDI_DIA = string.Empty,
+                            CLI_TELEFONO1 = g.Key.CLI_TELEFONO1,
+                            CLI_POLITICAS = g.Key.CLI_POLITICAS,
+                            CLI_DIRECCION = g.Key.CLI_DIRECCION,
+                            CLI_DIR_ENTREGA = g.Key.CLI_DIR_ENTREGA,
+                            CLI_NOMBRECOM = g.Key.CLI_NOMBRECOM,
+                            CLI_MAIL = g.Key.CLI_MAIL,
+                            CLI_RUC_CEDULA = g.Key.CLI_RUC_CEDULA,
+                            ID_PROVINCIA_FK = g.Key.ID_PROVINCIA_FK ?? 0,
+                            ID_CANTON_FK = g.Key.ID_CANTON_FK ?? 0,
+                            CLI_ESTABLECIMIENTO = g.Key.CLI_ESTABLECIMIENTO,
+                            POL_PORC_DESC = g.Key.POL_PORC_DESC,
+                            POL_PORC_FINANC = g.Key.POL_PORC_FINANC,
+                            POL_PORC_PRO_PAGO = g.Key.POL_PORC_PRO_PAGO,
+                            POL_PORC_PAG_CONTA = g.Key.POL_PORC_PAG_CONTA,
+                            POL_LINEA_CREDITO = g.Key.POL_LINEA_CREDITO,
+                            POL_DIAS_PLAZO = g.Key.POL_DIAS_PLAZO,
+                            POL_NRO_PAGOS = g.Key.POL_NRO_PAGOS,
+                            CLI_PARROQUIA = g.Key.CLI_PARROQUIA,
+                            CUPO = g.Key.CLI_CUPO,
+                            CLI_BLOQUEO = g.Key.CLI_BLOQUEO ?? 0,
+                            CLI_LATITUD_NR = g.Key.CLI_LATITUD_NR ?? 0M,
+                            CLI_LONGITUD_NR = g.Key.CLI_LONGITUD_NR ?? 0M,
+                            CLI_LATITUD1_NR = g.Key.CLI_LATITUD1_NR ?? 0M,
+                            CLI_LONGITUD1_NR = g.Key.CLI_LONGITUD1_NR ?? 0M
+
+                        };
+
+            var clientes = await query.OrderBy(x => x.CLI_NOMBRE).ToListAsync();
+
+
+            if (clientes == null || !clientes.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = FormatosTexto.DatosNoEncontrados;
+            }
+            else
+            {
+                foreach (var cliente in clientes)
+                {
+                    cliente.DEUDA = await ObtenerDeudaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO);
+                    cliente.DISPONIBLE = (cliente.CUPO ?? 0) - (cliente.DEUDA);
+                    cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO, cliente.CLI_AGENTE ?? 0);
+                }
+
+                response.Data = clientes;
+                response.Success = true;
+                response.Message = "Clientes encontrados exitosamente.";
+            }
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details (ex) here as needed
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los clientes.";
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
     }
 }
 

@@ -214,4 +214,23 @@ public class PedidoController : Controller
 
         return BadRequest(response.Message);
     }
+
+    [Authorize]
+    [HttpPost("CreatePedidoNavAsync")]
+
+    public async Task<IActionResult> CreatePedidoNavAsync([FromBody] AuxNuevoPedidoNav auxNuevoPedidoNav)
+    {
+        var response = await _pedidoservice.CreatePedidoNavAsync(auxNuevoPedidoNav);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+
 }
