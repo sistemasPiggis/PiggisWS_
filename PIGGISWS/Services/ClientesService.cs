@@ -11,6 +11,7 @@ using PIGGISWS.Models.DTOs;
 using PIGGISWS.Services.Utils;
 using System.Globalization;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Text;
 
 namespace PIGGISWS.Services;
@@ -100,6 +101,7 @@ public class ClientesService : IClientesService
                         // LEFT JOIN con CLIENTE_DIA para evitar duplicados
                         join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
                         from cd in cd_group.DefaultIfEmpty()
+                        let deuda = _context.F_CXC_SALDO_CARTERA_PED_ST_NR(cl.CLI_EMPRESA, cl.CLI_CODIGO)
                         where cl.CLI_EMPRESA == p_empresa
                               && cl.CLI_TIPO == p_cli_Tipo
                               && cl.CLI_INACTIVO == p_cli_Inactivo
@@ -113,7 +115,13 @@ public class ClientesService : IClientesService
 
                             && (preciosPermitidosNav.Count == 0 || !preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
                         // Agrupamos por cliente para obtener resultados únicos
-                        group new { cl, p, ce, cd } by new { cl.CLI_CODIGO, cl.CLI_NOMBRE, cl.CLI_AGENTE, cl.CLI_ID, cl.CLI_LISTAPRE, cl.CLI_ILIMITADO, cl.CLI_ZONA, cl.CLI_TELEFONO1, cl.CLI_POLITICAS, cl.CLI_DIRECCION, cl.CLI_DIR_ENTREGA, cl.CLI_NOMBRECOM, cl.CLI_MAIL, cl.CLI_RUC_CEDULA, ce.ID_PROVINCIA_FK, ce.ID_CANTON_FK, cl.CLI_ESTABLECIMIENTO, p.POL_PORC_DESC, p.POL_PORC_FINANC, p.POL_PORC_PRO_PAGO, p.POL_PORC_PAG_CONTA, p.POL_LINEA_CREDITO, p.POL_DIAS_PLAZO, p.POL_NRO_PAGOS, cl.CLI_PARROQUIA, cl.CLI_CUPO, cl.CLI_BLOQUEO, ce.CLI_LATITUD_NR, ce.CLI_LONGITUD_NR, ce.CLI_LATITUD1_NR, ce.CLI_LONGITUD1_NR } into g
+                        group new { cl, p, ce, cd } by new { cl.CLI_CODIGO, cl.CLI_NOMBRE, 
+                            cl.CLI_AGENTE, cl.CLI_ID, cl.CLI_LISTAPRE, cl.CLI_ILIMITADO, cl.CLI_ZONA, 
+                            cl.CLI_TELEFONO1, cl.CLI_POLITICAS, cl.CLI_DIRECCION, cl.CLI_DIR_ENTREGA, 
+                            cl.CLI_NOMBRECOM, cl.CLI_MAIL, cl.CLI_RUC_CEDULA, ce.ID_PROVINCIA_FK, ce.ID_CANTON_FK, 
+                            cl.CLI_ESTABLECIMIENTO, p.POL_PORC_DESC, p.POL_PORC_FINANC, p.POL_PORC_PRO_PAGO, p.POL_PORC_PAG_CONTA, 
+                            p.POL_LINEA_CREDITO, p.POL_DIAS_PLAZO, p.POL_NRO_PAGOS, cl.CLI_PARROQUIA, cl.CLI_CUPO, cl.CLI_BLOQUEO, 
+                            ce.CLI_LATITUD_NR, ce.CLI_LONGITUD_NR, ce.CLI_LATITUD1_NR, ce.CLI_LONGITUD1_NR, deuda } into g
                         select new ClienteDto
                         {
                             // Tomamos los datos de la clave de agrupación (g.Key)
@@ -150,9 +158,11 @@ public class ClientesService : IClientesService
                             CLI_LATITUD_NR = g.Key.CLI_LATITUD_NR ?? 0M,
                             CLI_LONGITUD_NR = g.Key.CLI_LONGITUD_NR ?? 0M,
                             CLI_LATITUD1_NR = g.Key.CLI_LATITUD1_NR ?? 0M,
-                            CLI_LONGITUD1_NR = g.Key.CLI_LONGITUD1_NR ?? 0M
-
-                        };
+                            CLI_LONGITUD1_NR = g.Key.CLI_LONGITUD1_NR ?? 0M,
+                            DEUDA = g.Key.deuda,
+                            FECHA_SUG = _context.F_VNT_FECHA_FACTURAR_DT(1, g.Key.CLI_CODIGO, g.Key.CLI_AGENTE ?? 0),
+                            DISPONIBLE = (g.Key.CLI_CUPO ?? 0) - g.Key.deuda
+                        }; 
 
             var clientes = await query.OrderBy(x => x.CLI_NOMBRE).ToListAsync();
 
@@ -165,12 +175,12 @@ public class ClientesService : IClientesService
             }
             else
             {
-                foreach (var cliente in clientes)
-                {
-                    cliente.DEUDA = await ObtenerDeudaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO);
-                    cliente.DISPONIBLE = (cliente.CUPO ?? 0) - (cliente.DEUDA);
-                    cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO, cliente.CLI_AGENTE ?? 0);
-                }
+                //foreach (var cliente in clientes)
+                //{
+                //    cliente.DEUDA = await ObtenerDeudaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO);
+                //    cliente.DISPONIBLE = (cliente.CUPO ?? 0) - (cliente.DEUDA);
+                //    cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO, cliente.CLI_AGENTE ?? 0);
+                //}
 
                 response.Data = clientes;
                 response.Success = true;
@@ -1196,9 +1206,9 @@ public class ClientesService : IClientesService
             {
                 foreach (var cliente in clientes)
                 {
-                    cliente.DEUDA = await ObtenerDeudaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO);
-                    cliente.DISPONIBLE = (cliente.CUPO ?? 0) - (cliente.DEUDA);
-                    cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO, cliente.CLI_AGENTE ?? 0);
+                    cliente.DEUDA = 0;
+                    cliente.DISPONIBLE = 0;
+                    cliente.FECHA_SUG = DateTime.Now;
                 }
 
                 response.Data = clientes;

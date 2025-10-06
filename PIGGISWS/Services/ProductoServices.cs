@@ -273,22 +273,47 @@ public class ProductoService : IProductoService
     {
 
         var response = new ServiceResponse<object>();
+      
 
         try
         {
 
-            var productos = await (from p in _context.PRODUCTO
+            var query = await (from p in _context.PRODUCTO
                              join cp in _context.CLASIFPROD on p.PRO_CLASIFICACION equals cp.CPR_CODIGO
                              join gp in _context.GPRODUCTO on p.PRO_GPRODUCTO equals gp.GPR_CODIGO
-                             where p.PRO_INACTIVO == 0
+                             join dl in _context.DLISTAPRE on p.PRO_CODIGO equals dl.DLP_PRODUCTO
+                                   join u in _context.UMEDIDA on p.PRO_UNIDAD equals u.UMD_CODIGO
+                                   where p.PRO_INACTIVO == 0
                                    && cp.CPR_ID == p_nav_CPR_ID
                                    && gp.GPR_CODIGO != p_nav_GPR_CODIGO
-                             orderby p.PRO_NOMBRE ascending
+                                   && dl.DLP_LISTAPRE == 90000183
+                                   orderby p.PRO_NOMBRE ascending
                              select new
                              {
-                                 PRO_NOMBRE = p.PRO_ID + " - " + p.PRO_NOMBRE,
-                                 PRO_CODIGO = p.PRO_CODIGO
-                             }).ToListAsync();
+                                 PRO_NOMBRE =  p.PRO_NOMBRE,
+                                 PRO_CODIGO = p.PRO_CODIGO,
+                                 DLP_LISTAPRE= dl.DLP_LISTAPRE,
+                                 PRO_ID = p.PRO_ID,
+                                 UMD_ID = u.UMD_ID,
+                                 UMD_CODIGO= u.UMD_CODIGO
+                             })
+                             .Distinct()
+                             .ToListAsync();
+
+
+            var productos = query.Select(x => new
+            {
+                x.PRO_NOMBRE,
+                x.PRO_CODIGO,
+                x.DLP_LISTAPRE,
+                x.PRO_ID,
+                x.UMD_ID,
+                x.UMD_CODIGO,
+
+                //UMD_ID2 = x.UMD_ID == "KGS" ? "UNI" : (x.UMD_ID == "UNI" ? "KGS" : x.UMD_ID),
+                //UMD_CODIGO2 = x.UMD_CODIGO == 184 ? 90000202 : (x.UMD_CODIGO == 90000202 ? 184 : x.UMD_CODIGO)
+
+            }).ToList();
 
 
             if (productos == null || !productos.Any())
@@ -312,6 +337,90 @@ public class ProductoService : IProductoService
             
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los Productos.";
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
+    }
+
+
+
+    public async Task<ServiceResponse<object>> GetTopProdNavxAgente(decimal agente)
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+
+            DateTime fechaLimite = DateTime.Today.AddDays(-720);
+            
+                      
+            var productos = (
+                from cc in _context.CCOMPROBA
+                join cd in _context.DFACTURA on cc.CCO_CODIGO equals cd.DFAC_CFAC_COMPROBA
+                join p in _context.PRODUCTO on cd.DFAC_PRODUCTO equals p.PRO_CODIGO
+                join c in _context.CLASIFPROD on p.PRO_CLASIFICACION equals c.CPR_CODIGO
+                join g in _context.GPRODUCTO on p.PRO_GPRODUCTO equals g.GPR_CODIGO
+                join ct in _context.CTIPOCOM on cc.CCO_SIGLA equals ct.CTI_CODIGO
+                join cl in _context.CLIENTE on cc.CCO_CODCLIPRO equals cl.CLI_CODIGO
+                join dl in _context.DLISTAPRE on p.PRO_CODIGO equals dl.DLP_PRODUCTO
+                where cc.CCO_FECHA >= fechaLimite
+                    && cc.CCO_SIGLA == 673
+             
+                     && cl.CLI_AGENTE == agente 
+                    && c.CPR_ID == p_nav_CPR_ID
+                    && g.GPR_CODIGO != p_nav_GPR_CODIGO
+                    && p.PRO_INACTIVO == 0
+                && dl.DLP_LISTAPRE == 90000183
+                select new
+                {
+                    cd.DFAC_PRODUCTO,
+                    cc.CCO_CODCLIPRO
+                }
+            )
+            .AsEnumerable()
+            .Distinct()
+            .GroupBy(g => g.CCO_CODCLIPRO)
+   
+            .SelectMany(g => g
+      
+                .GroupBy(x => x.DFAC_PRODUCTO)
+         
+                .Select(productGroup => new
+                {
+                    DFAC_PRODUCTO = productGroup.Key,
+                    CCO_CODCLIPRO = g.Key,
+                    Ranking = productGroup.Count() 
+                })
+                .OrderByDescending(x => x.Ranking)
+                .Take(50)
+            )
+            .ToList(); 
+
+
+
+
+            if (productos == null || !productos.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "TOP PRODUCTOS NAVIDAD NO ENCONTRADOS.";
+                return response;
+            }
+
+            response.Data = productos;
+            response.Success = true;
+            response.Message = "Productos encontrados exitosamente.";
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+           
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los clientes.";
             throw new DatabaseException("Error de base de datos.", ex);
         }
 

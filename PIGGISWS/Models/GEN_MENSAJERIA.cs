@@ -21,7 +21,7 @@ public class GEN_MENSAJERIA
     public string? PROCESO_ENVIO { get; set; } = string.Empty;
     public string? MENSAJE_CORREO { get; set; } = string.Empty;
     public string? CREA_USR { get; set; } = string.Empty;
-    public DateTime? CCO_FECHA { get; set; }
+    public DateTime? CREA_FECHA { get; set; }
     public string? MOD_USR { get; set; }
     public DateTime? MOD_FECHA { get; set; } = DateTime.Now;
 }

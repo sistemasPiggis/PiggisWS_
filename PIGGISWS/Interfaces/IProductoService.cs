@@ -9,4 +9,5 @@ public interface IProductoService
     Task<ServiceResponse<object>> GetTopProductosxAgente(int agente);
     Task<ServiceResponse<object>> GetDescuentosxProductoAsync(decimal cproducto, decimal lprecios, decimal ccliente);
     Task<ServiceResponse<object>> GetProductosNavidad();
+    Task<ServiceResponse<object>> GetTopProdNavxAgente(decimal agente);
 }

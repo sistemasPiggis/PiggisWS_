@@ -22,6 +22,7 @@ public class PedidoService : IPedidoService
     private readonly IRuteroService _ruteroService;
     private readonly IAgenteService _agenteService;
     private readonly ILogger<PedidoService> _logger;
+    private readonly IMensajeriaService _mensajeriaService;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
 
     #region Prop
@@ -64,7 +65,8 @@ public class PedidoService : IPedidoService
     int p_pedd_totimpuesto;
     int p_ped_cfac_orden;
     #endregion
-    public PedidoService(ApplicationDbContext context, IProductoService productoService, IRuteroService ruteroService, IAgenteService agenteService, ILogger<PedidoService> logger)
+    public PedidoService(ApplicationDbContext context, IProductoService productoService, IRuteroService ruteroService, 
+                        IAgenteService agenteService, ILogger<PedidoService> logger, IMensajeriaService mensajeriaService)
     {
         _logger = logger;
         _productoService = productoService;
@@ -72,6 +74,7 @@ public class PedidoService : IPedidoService
         _agenteService = agenteService;
         _context = context;
         GetParametros();
+        _mensajeriaService = mensajeriaService;
     }
     public void GetParametros()
     {
@@ -117,7 +120,8 @@ public class PedidoService : IPedidoService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.ToString());
+ 
+            _logger.LogError(" --------------------- ERROR ------------------ GetParametros Pedidos " + ex.ToString());
         }
     }
 
@@ -1236,13 +1240,13 @@ public class PedidoService : IPedidoService
 
 
 
-    public async Task<ServiceResponse<object>> GetPedidosNavidadAsync(decimal agente)
+    public async Task<ServiceResponse<object>> GetPedidosNavidadAsync(decimal agente) //// SOLO MUESTRA LAS CABECERAS
     {
         var response = new ServiceResponse<object>();
         try
         {
             var yearNow = DateTime.Now.AddYears(-1).Year;
-            var resultados = await (from t in _context.TDS_PEDIDOS_NAV_CAB
+            var query = await (from t in _context.TDS_PEDIDOS_NAV_CAB
                                     join cl in _context.CLIENTE on t.CLI_CODIGO equals cl.CLI_CODIGO
                                     where cl.CLI_AGENTE == agente
                                     && t.FECHA.Year >= yearNow
@@ -1250,10 +1254,17 @@ public class PedidoService : IPedidoService
                                     {
                                         t.ID_PEDIDO_NAV,
                                         cl.CLI_NOMBRE,
-                                        t.FECHA
+                                        t.FECHA,
+                                        //PED_INFO = cl.CLI_NOMBRE + " " +  t.FECHA + " " + t.ID_PEDIDO_NAV
                                     }).ToListAsync();
 
-
+            var resultados = query.Select(r => new
+            {
+                r.ID_PEDIDO_NAV,
+                r.CLI_NOMBRE,
+                FECHA = r.FECHA.ToString("yyyy/MM/dd"), 
+                PED_INFO = r.CLI_NOMBRE + " " + r.FECHA.ToString("yyyy-MM-dd") + " " + r.ID_PEDIDO_NAV
+            }).ToList();
             if (resultados == null || !resultados.Any())
             {
                 response.Data = null;
@@ -1278,7 +1289,7 @@ public class PedidoService : IPedidoService
 
 
 
-    public async Task<ServiceResponse<object>> GetPedidoNavidadDAsync(AuxGeneral auxGeneral)
+    public async Task<ServiceResponse<object>> GetPedidoNavidadDAsync(AuxGeneral auxGeneral) /// muestra los detalles
     {
         var response = new ServiceResponse<object>();
         try
@@ -1286,9 +1297,9 @@ public class PedidoService : IPedidoService
 
             var cabecera = await (from t in _context.TDS_PEDIDOS_NAV_CAB
                                   join cl in _context.CLIENTE on t.CLI_CODIGO equals cl.CLI_CODIGO
-                                  where t.ID_PEDIDO_NAV == auxGeneral.AuxDecimal
+                                  where t.ID_PEDIDO_NAV == auxGeneral.AuxInt
 
-                                  where t.ID_PEDIDO_NAV == auxGeneral.AuxDecimal
+                                 
                                   select new PedidoNavCab
                                   {
                                       FECHA = t.FECHA,
@@ -1296,14 +1307,15 @@ public class PedidoService : IPedidoService
                                       ID_PEDIDO_NAV = t.ID_PEDIDO_NAV,
                                       OBSERVACIONES = t.OBSERVACIONES,
                                       TELEFONO = t.TELEFONO,
-                                      CLI_NOMBRE = cl.CLI_NOMBRE ?? "CLIENTE NAV NO ENCONTRADO"
+                                      CLI_NOMBRE = cl.CLI_NOMBRE 
+
                                   }).ToListAsync();
 
 
 
             var detalle = await (from t in _context.TDS_PEDIDO_NAV_DET
                                  join p in _context.PRODUCTO on t.PRO_CODIGO equals p.PRO_CODIGO
-                                 where t.ID_PEDIDO_FK == auxGeneral.AuxDecimal
+                                 where t.ID_PEDIDO_FK == auxGeneral.AuxInt
                                  select new PedidoNavDetalle
                                  {
                                      CANTIDAD = t.CANTIDAD,
@@ -1313,10 +1325,12 @@ public class PedidoService : IPedidoService
                                      PRO_CODIGO = t.PRO_CODIGO,
                                      PRECIO = t.PRECIO,
                                      UMD_CODIGO = t.UMD_CODIGO,
-                                     PRO_NOMBRE = p.PRO_NOMBRE ?? "PRODUCTO NAV NO ENCONTRADO",
+                                     PRO_NOMBRE = p.PRO_NOMBRE 
 
 
-                                 }).ToListAsync();
+                                 })
+                                 .OrderBy(o=> o.ID_PEDIDO_DET)
+                                 .ToListAsync();
 
             var resultados = new AuxNuevoPedidoNav
             {
@@ -1387,17 +1401,19 @@ public class PedidoService : IPedidoService
 
                 var cabecera = new TDS_PEDIDOS_NAV_CAB
                 {
-                    CCO_FECHA = auxNuevoPedidoNav.PedidoNavCab?.FECHA ?? DateTime.Now,
-                    CLI_CODIGO = auxNuevoPedidoNav.PedidoNavCab?.CLI_CODIGO ?? 0,
                     ID_PEDIDO_NAV = id_PEDIDO_NAV,
-                    OBSERVACIONES = auxNuevoPedidoNav.PedidoNavCab?.OBSERVACIONES ?? string.Empty,
-                    TELEFONO = auxNuevoPedidoNav.PedidoNavCab?.TELEFONO ?? string.Empty,
+                    CLI_CODIGO = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.CLI_CODIGO ?? 0,
+                    FECHA = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.FECHA ?? DateTime.Now,
+
+                    TELEFONO = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.TELEFONO ?? string.Empty,
+                    OBSERVACIONES = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.OBSERVACIONES ?? string.Empty,
+                   
 
                 };
                 await _context.TDS_PEDIDOS_NAV_CAB.AddAsync(cabecera);
-                int ccomprobaisave = await _context.SaveChangesAsync();
+                int cabsave = await _context.SaveChangesAsync();
 
-                if (ccomprobaisave != 0)
+                if (cabsave != 0)
                 {
                     foreach (var auxint in auxNuevoPedidoNav.TDS_PEDIDO_NAV_DET)
                     {
@@ -1412,19 +1428,20 @@ public class PedidoService : IPedidoService
                         }
                         var tDS_PEDIDO_NAV_DET = new TDS_PEDIDO_NAV_DET
                         {
-                            CANTIDAD = auxint.CANTIDAD,
-                            ID_EMPRESA = auxint.ID_EMPRESA,
                             ID_PEDIDO_DET = ID_PEDIDO_DET,
+                            ID_EMPRESA = auxint.ID_EMPRESA,
                             ID_PEDIDO_FK = id_PEDIDO_NAV,
                             PRO_CODIGO = auxint.PRO_CODIGO,
+                            CANTIDAD = auxint.CANTIDAD,
+
                             PRECIO = auxint.PRECIO,
                             UMD_CODIGO = auxint.UMD_CODIGO,
                         };
                         listadpedidoN.Add(tDS_PEDIDO_NAV_DET);
                     }
                     await _context.TDS_PEDIDO_NAV_DET.AddRangeAsync(listadpedidoN);
-                    int dfacturaisave = await _context.SaveChangesAsync();
-                    if (dfacturaisave != 0)
+                    int detsave = await _context.SaveChangesAsync();
+                    if (detsave != 0)
                     {
                        
                        agente = await _agenteService.GetCodigoAgentexClientesync(cabecera.CLI_CODIGO);
@@ -1432,6 +1449,8 @@ public class PedidoService : IPedidoService
                         if (agente != null)
                         {
                             cabecera.CREA_USR = usr;
+                            cabecera.MOD_USR = usr;
+                    
                             _context.TDS_PEDIDOS_NAV_CAB.Update(cabecera);
                             await _context.SaveChangesAsync();
 
@@ -1449,12 +1468,15 @@ public class PedidoService : IPedidoService
                     }
                     var aux = new AuxGeneral
                     {
-                        AuxDecimal = id_PEDIDO_NAV
+                        AuxInt = id_PEDIDO_NAV
                     };
-                    var AuxNuevoPedidoNav = await GetPedidoNavidadDAsync(aux);
-                    response.Data = AuxNuevoPedidoNav;
+                    var mensajeria = await _mensajeriaService.CreateMensajeNavAsync(aux);
+
+                    //var AuxNuevoPedidoNav = await GetPedidoNavidadDAsync(aux);
+
+                    response.Data = auxNuevoPedidoNav;
                     response.Success = true;
-                    response.Message = "Pedido guardado Existosamente # de pedido = " + id_PEDIDO_NAV;
+                    response.Message = "Pedido guardado Existosamente # de pedido = " + id_PEDIDO_NAV +  mensajeria.Message;
                     return response;
                 }
                 else

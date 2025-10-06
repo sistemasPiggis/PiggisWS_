@@ -233,4 +233,40 @@ public class PedidoController : Controller
 
 
 
+    [Authorize]
+    [HttpPost("GetPedidosNavidadAsync")]
+
+    public async Task<IActionResult> GetPedidosNavidadAsync([FromBody] decimal agente)
+    {
+
+        var response = await _pedidoservice.GetPedidosNavidadAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetPedidoNavidadDAsync")]
+
+    public async Task<IActionResult> GetPedidoNavidadDAsync([FromBody] AuxGeneral agente)
+    {
+
+        var response = await _pedidoservice.GetPedidoNavidadDAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
 }

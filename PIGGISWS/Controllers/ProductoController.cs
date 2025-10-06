@@ -53,7 +53,7 @@ public class ProductoController : ControllerBase
     [Authorize]
     [HttpPost("GetProductosNavidad")]
 
-    public async Task<IActionResult> GetProductosNavidad([FromBody] AuxPedido auxPedido)
+    public async Task<IActionResult> GetProductosNavidad()
     {
         var response = await _productoservice.GetProductosNavidad();
 
@@ -66,4 +66,21 @@ public class ProductoController : ControllerBase
         return BadRequest(response.Message);
     }
 
+
+
+    [Authorize]
+    [HttpPost("GetTopProdNavxAgente")]
+
+    public async Task<IActionResult> GetTopProdNavxAgente([FromBody] decimal agente)
+    {
+        var response = await _productoservice.GetTopProdNavxAgente(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
 }

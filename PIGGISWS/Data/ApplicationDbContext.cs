@@ -121,6 +121,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<TDS_PEDIDO_NAV_DET> TDS_PEDIDO_NAV_DET { get; set; }
     public DbSet<TDS_PEDIDOS_NAV_CAB> TDS_PEDIDOS_NAV_CAB { get; set; }
 
+    public decimal F_CXC_SALDO_CARTERA_PED_ST_NR(int empresa, decimal clienteCodigo)
+               => throw new NotSupportedException();
+
+    public DateTime F_VNT_FECHA_FACTURAR_DT(int empresa, decimal clienteCodigo, decimal agente)
+        => throw new NotSupportedException();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
@@ -188,6 +194,16 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<REP_DET_ESTADO_DESPACHO_PED>().ToTable("REP_DET_ESTADO_DESPACHO_PED").HasKey(a => new { a.FAC, a.ESTADO_DESPACHO, a.CLI_NOMBRE });
         modelBuilder.Entity<REP_CART_VEN_INT_T>().ToTable("REP_CART_VEN_INT_T").HasKey(a => new { a.DOC, a.AGE_CODIGO, a.CLI_CLAVE });
         #endregion
+
+       
+
+    modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
+                .GetMethod(nameof(F_CXC_SALDO_CARTERA_PED_ST_NR), new[] { typeof(int), typeof(decimal) }))
+                .HasName("F_CXC_SALDO_CARTERA_PED_ST_NR");
+
+        modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
+            .GetMethod(nameof(F_VNT_FECHA_FACTURAR_DT), new[] { typeof(int), typeof(decimal), typeof(decimal) }))
+            .HasName("F_VNT_FECHA_FACTURAR_DT");
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
 
