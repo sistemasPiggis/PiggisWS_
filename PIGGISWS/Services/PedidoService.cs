@@ -345,6 +345,9 @@ public class PedidoService : IPedidoService
     {
         var response = new ServiceResponse<object>();
         var valiped = new ServiceResponse<object>();
+        DateTime _fecha = DateTime.Now;
+        var _almacen = await _context.BODEGA.Where(b => b.BOD_CODIGO == auxNuevoPedidos.Ccomprobai.CCO_BODEGA).ToListAsync();
+        int almacen = _almacen.Select(a => a.BOD_ALMACEN).FirstOrDefault() ?? 0;
         valiped = await ValidaPedExisteAsync(auxNuevoPedidos);
         if (valiped.Success)
         {
@@ -371,7 +374,7 @@ public class PedidoService : IPedidoService
         }
         ;
 
-        var horario = await _ruteroService.ValidaHoraPedidoAsync(auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0, auxNuevoPedidos.Ccomprobai.CCO_FECHA);
+        var horario = await _ruteroService.ValidaHoraPedidoAsync(auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0, _fecha, almacen);
         if (horario.Data != null)
         {
             if (horario.Success == false)
@@ -431,7 +434,7 @@ public class PedidoService : IPedidoService
         int periodo = DateTime.Now.Year;
         int mes = DateTime.Now.Month;
         int dia = DateTime.Now.Day;
-        DateTime _fecha = DateTime.Now;
+       
         DateTime fecha = auxNuevoPedidos.Ccomprobai.CCO_FECHA;
         decimal cco_codigo = 0;
 
@@ -451,8 +454,7 @@ public class PedidoService : IPedidoService
                     var result = await command.ExecuteScalarAsync();
                     cco_codigo = Convert.ToDecimal(result);
                 }
-                var _almacen = await _context.BODEGA.Where(b => b.BOD_CODIGO == auxNuevoPedidos.Ccomprobai.CCO_BODEGA).ToListAsync();
-                int almacen = _almacen.Select(a => a.BOD_ALMACEN).FirstOrDefault() ?? 0;
+                
 
                 var _numero = await _context.DTIPOCOM.Where(d => d.DTI_CTI_CODIGO == p_ped_sigla
                                                             && d.DTI_PERIODO == periodo && d.DTI_ALMACEN == almacen && d.DTI_SERIE == p_ped_serie).ToListAsync();
@@ -1468,7 +1470,7 @@ public class PedidoService : IPedidoService
                     }
                     var aux = new AuxGeneral
                     {
-                        AuxInt = id_PEDIDO_NAV
+                        AuxDecimal = id_PEDIDO_NAV
                     };
                     var mensajeria = await _mensajeriaService.CreateMensajeNavAsync(aux);
 

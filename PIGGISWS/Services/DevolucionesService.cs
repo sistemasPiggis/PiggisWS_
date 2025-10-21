@@ -184,8 +184,38 @@ public class DevolucionesService : IDevolucionesService
             _logger.LogError("Error al guardar devolución: No todos los datos están completos");
             return respuesta;
         }
- 
-            using (var transaction = await _context.Database.BeginTransactionAsync())
+
+
+        // VALIDA QUE LA DEVOLUCIÓN SE HAYA CREADO 
+        var existingDevExts = await _context.DEVOLUCION_EXT
+        .Where(ext => ext.DEV_REFERENCIA_UNICA_TX == auxDevolucion.Ext.DEV_REFERENCIA_UNICA_TX).ToListAsync();
+
+
+        var existingDevExt = existingDevExts.FirstOrDefault();
+        if (existingDevExt != null)
+        {
+            
+            var existeDevCabs = await _context.DEVOLUCION_CAB
+                .Where(cab => cab.DEV_CODIGO == existingDevExt.DEV_CODIGO).ToListAsync();
+            var existeDevCab = existeDevCabs.FirstOrDefault();
+            var existeDevDet = await _context.DEVOLUCION_DET
+               .Where(det => det.DVD_CODIGO == existingDevExt.DEV_CODIGO).ToListAsync();
+           
+
+
+            _logger.LogInformation("Devolución duplicada detectada con DEV_REFERENCIA_UNICA_TX: {Referencia}. Se retorna la devolución existente.", auxDevolucion.Ext.DEV_REFERENCIA_UNICA_TX);
+
+           
+            respuesta.Data = new AuxDevolucion { Cabecera = existeDevCab, Detalle = existeDevDet, Ext = existingDevExt };
+            respuesta.Success = true;
+            respuesta.Message = $"La devolución ya había sido registrada previamente con el número: {existeDevCab?.DEV_NUMERO}";
+            return respuesta;
+        }
+
+
+
+
+        using (var transaction = await _context.Database.BeginTransactionAsync())
             {
                 try
                 {
@@ -450,19 +480,22 @@ public class DevolucionesService : IDevolucionesService
 
             int currentYear = DateTime.Now.Year;
             var query1 = from d in _context.TMP_DEV_PROD_CLI_AGE
+                         join c in _context.CLIENTE on d.CLIENTE_FK equals c.CLI_CODIGO
                          where d.AGENTE_FK == agente && d.ID_DEVOLUCION_NR != null
                          && d.FECHA_DT.HasValue
                             && d.FECHA_DT.Value.Year == currentYear
-                         group d by new { d.ID_DEVOLUCION_NR, d.FECHA_DT, d.NUMERO_IDC } into g
+                         group d by new { d.ID_DEVOLUCION_NR, d.FECHA_DT, d.NUMERO_IDC, c.CLI_NOMBRE } into g
                          select new
                          {
                              CODIGO = g.Key.ID_DEVOLUCION_NR,
                              NUMERO = g.Key.NUMERO_IDC,
                              FECHA = (DateTime?)g.Key.FECHA_DT,
-                             SOURCE = "A"
+                             SOURCE = "A", 
+                             CLIENTE = g.Key.CLI_NOMBRE
                          };
 
             var query2 = from c in _context.DEVOLUCION_CAB
+                         join cl in _context.CLIENTE on c.DEV_CLIENTE equals cl.CLI_CODIGO
                          where c.DEV_AGENTE == agente
                          && c.DEV_FECHA.HasValue
                           && c.DEV_FECHA.Value.Year == currentYear
@@ -471,7 +504,8 @@ public class DevolucionesService : IDevolucionesService
                              CODIGO = c.DEV_CODIGO,
                              NUMERO = c.DEV_NUMERO,
                              FECHA = c.DEV_FECHA,
-                             SOURCE = "N"
+                             SOURCE = "N",
+                             CLIENTE = cl.CLI_NOMBRE
                          };
 
             var unionQuery = query1.Union(query2);
@@ -481,7 +515,7 @@ public class DevolucionesService : IDevolucionesService
             var resultados = data
                 .Select(x => new
                 {
-                    ZON_NOMBRE = (x.FECHA.HasValue ? x.FECHA.Value.ToString("yyyy-MM-dd") : "") + " - " + x.NUMERO.ToString(),
+                    ZON_NOMBRE = (x.FECHA.HasValue ? x.FECHA.Value.ToString("yyyy-MM-dd") : "") + " - " + x.NUMERO.ToString() + " - " +  x.CLIENTE,
                     CRT_DOCTRAN = x.CODIGO.ToString() + x.SOURCE
                 })
                 //.OrderByDescending(x => DateTime.TryParse(x.ZON_NOMBRE.Split(" - ")[0], out var fecha) ? fecha : DateTime.MinValue)

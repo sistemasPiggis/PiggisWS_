@@ -21,6 +21,7 @@ public class ProductoService : IProductoService
     int p_cli_Inactivo = 0;
     string p_nav_CPR_ID = string.Empty;
     decimal p_nav_GPR_CODIGO = 0;
+    int p_est_anulado;
     //int p_cli_cupo = 0;
     //string p_cli_estado = "";
     public ProductoService(ApplicationDbContext context)
@@ -36,6 +37,7 @@ public class ProductoService : IProductoService
         p_cli_Inactivo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 6)?.VALOR ?? "0");
         p_nav_CPR_ID = parametros.FirstOrDefault(p => p.CODIGO == 58)?.VALOR ?? "0";
         p_nav_GPR_CODIGO = Convert.ToDecimal(parametros.FirstOrDefault(p => p.CODIGO == 59)?.VALOR ?? "0");
+        p_est_anulado = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 68)?.VALOR ?? "0");
     }
 
 
@@ -163,6 +165,8 @@ public class ProductoService : IProductoService
               join cld in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cld.CDI_CLIENTE
               where cc.CCO_FECHA >= p_dias_lapso
                     && cc.CCO_SIGLA == 673
+                    && cc.CCO_ESTADO != p_est_anulado
+                    && p.PRO_INACTIVO ==0
                     && cl.CLI_AGENTE == agente
                     && (
                                             diasPermitidos.Contains(dayformateado)
@@ -184,8 +188,9 @@ public class ProductoService : IProductoService
                   CCO_CODCLIPRO = g.Key,
                   Ranking = productGroup.Count()
               })
-              .OrderByDescending(x => x.Ranking) 
+              
               .Take(50)) // Tomamos los 50 primeros de cada cliente
+          .OrderByDescending(x => x.Ranking)
           .ToList(); 
 
 
@@ -280,19 +285,16 @@ public class ProductoService : IProductoService
 
             var query = await (from p in _context.PRODUCTO
                              join cp in _context.CLASIFPROD on p.PRO_CLASIFICACION equals cp.CPR_CODIGO
-                             join gp in _context.GPRODUCTO on p.PRO_GPRODUCTO equals gp.GPR_CODIGO
-                             join dl in _context.DLISTAPRE on p.PRO_CODIGO equals dl.DLP_PRODUCTO
-                                   join u in _context.UMEDIDA on p.PRO_UNIDAD equals u.UMD_CODIGO
+                            join u in _context.UMEDIDA on p.PRO_UNIDAD equals u.UMD_CODIGO
                                    where p.PRO_INACTIVO == 0
                                    && cp.CPR_ID == p_nav_CPR_ID
-                                   && gp.GPR_CODIGO != p_nav_GPR_CODIGO
-                                   && dl.DLP_LISTAPRE == 90000183
+                        
                                    orderby p.PRO_NOMBRE ascending
                              select new
                              {
                                  PRO_NOMBRE =  p.PRO_NOMBRE,
                                  PRO_CODIGO = p.PRO_CODIGO,
-                                 DLP_LISTAPRE= dl.DLP_LISTAPRE,
+                                 DLP_LISTAPRE= 90000183,
                                  PRO_ID = p.PRO_ID,
                                  UMD_ID = u.UMD_ID,
                                  UMD_CODIGO= u.UMD_CODIGO
