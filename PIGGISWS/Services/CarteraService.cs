@@ -28,6 +28,7 @@ public class CarteraService : ICarteraService
     decimal CRT_NUMERO;
     int p_dias_anticipo;
     string usuarioAg;
+    string P_LISTA_PNAV = "";
 
     public CarteraService(ApplicationDbContext context, IAgenteService agenteService, ILogger<PedidoService> logger)
     {
@@ -45,7 +46,8 @@ public class CarteraService : ICarteraService
             p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
             p_car_siglafac = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 55)?.VALOR ?? "0");
             p_dias_anticipo = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 57)?.VALOR ?? "0");
-           
+            P_LISTA_PNAV = parametros.First(p => p.CODIGO == 61)?.VALOR ?? "";
+
         }
         catch (Exception ex)
         {
@@ -103,7 +105,7 @@ public class CarteraService : ICarteraService
 
 
 
-    public async Task<ServiceResponse<object>> GetCarteraxFacturaDiaAsync(Cartera cartera) 
+    public async Task<ServiceResponse<object>> GetCarteraxFacturaDiaAsync(Cartera cartera)
     {
         System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
 
@@ -118,8 +120,8 @@ public class CarteraService : ICarteraService
         var response = new ServiceResponse<object>();
         try
         {
-            var saldo = await (from 
-                               dd in _context.DDOCUMENTO 
+            var saldo = await (from
+                               dd in _context.DDOCUMENTO
                                join a in _context.AGENTE on dd.DDO_AGENTE equals a.AGE_CODIGO
                                join cl in _context.CLIENTE on dd.DDO_CODCLIPRO equals cl.CLI_CODIGO
                                join zo in _context.ZONA on cl.CLI_ZONA equals zo.ZON_CODIGO
@@ -132,7 +134,7 @@ public class CarteraService : ICarteraService
                                && dd.DDO_DEBCRE == 1
                                select new AuxCartera
                                {
-                                dDocumento = dd,
+                                   dDocumento = dd,
                                    //cartera = ca,
                                    SALDO = dd.DDO_MONTO - (dd.DDO_CANCELA ?? 0),
                                    CLI_NOMBRE = cl.CLI_NOMBRE,
@@ -140,7 +142,7 @@ public class CarteraService : ICarteraService
                                    CRT_MONTO = dd.DDO_MONTO
                                    ///AGE_NOMBRE = a.AGE_NOMBRE
                                }
-                               ).OrderBy(c => c.dDocumento.DDO_FECHA_VEN )
+                               ).OrderBy(c => c.dDocumento.DDO_FECHA_VEN)
                                 .ToListAsync();
 
 
@@ -641,23 +643,23 @@ public class CarteraService : ICarteraService
         {
             var deudas = await (from
                                dd in _context.REP_CONS_CARTERA_INTERNETA
-                              
-                               select new Rep_Cons_Cartera_Interneta
-                               {
-                                   DOC = dd.DOC,
-                                   DDO_DEBCRE = dd.DDO_DEBCRE,
-                                   DDO_CODCLIPRO = dd.DDO_CODCLIPRO,
-                                   CLI_NOMBRE = dd.CLI_NOMBRE,
-                                  DDO_MONTO = dd.DDO_MONTO,
-                               DDO_FECHA_VEN = dd.DDO_FECHA_VEN,
-                               DDO_FECHA_EMI = dd.DDO_FECHA_EMI,
-                                   CANCELA = dd.CANCELA,
-                                   SALDO = dd.SALDO,
-                                   SALDOT = dd.SALDOT,
-                                   CCO_TIPODOC = dd.CCO_TIPODOC,
-                                   CCO_SIGLA = dd.CCO_SIGLA
 
-                               }
+                                select new Rep_Cons_Cartera_Interneta
+                                {
+                                    DOC = dd.DOC,
+                                    DDO_DEBCRE = dd.DDO_DEBCRE,
+                                    DDO_CODCLIPRO = dd.DDO_CODCLIPRO,
+                                    CLI_NOMBRE = dd.CLI_NOMBRE,
+                                    DDO_MONTO = dd.DDO_MONTO,
+                                    DDO_FECHA_VEN = dd.DDO_FECHA_VEN,
+                                    DDO_FECHA_EMI = dd.DDO_FECHA_EMI,
+                                    CANCELA = dd.CANCELA,
+                                    SALDO = dd.SALDO,
+                                    SALDOT = dd.SALDOT,
+                                    CCO_TIPODOC = dd.CCO_TIPODOC,
+                                    CCO_SIGLA = dd.CCO_SIGLA
+
+                                }
                                ).Where(c => c.DDO_CODCLIPRO == Cliente && c.DDO_DEBCRE == 1)
                                .OrderBy(c => c.DDO_FECHA_EMI)
                                .ToListAsync();
@@ -696,23 +698,23 @@ public class CarteraService : ICarteraService
             var anticipos = await (from
                                dd in _context.REP_CONS_CARTERA_INTERNETA
 
-                                select new Rep_Cons_Cartera_Interneta
-                                {
-                                    DOC = dd.DOC,
-                                    DDO_DEBCRE = dd.DDO_DEBCRE,
-                                    DDO_CODCLIPRO = dd.DDO_CODCLIPRO,
-                                    CLI_NOMBRE = dd.CLI_NOMBRE,
-                                    DDO_MONTO = dd.DDO_MONTO,
-                                    DDO_FECHA_VEN = dd.DDO_FECHA_VEN,
-                                    DDO_FECHA_EMI = dd.DDO_FECHA_EMI,
-                                    CANCELA = dd.CANCELA,
-                                    SALDO = dd.SALDO,
-                                    SALDOT = dd.SALDOT,
-                                    CCO_TIPODOC = dd.CCO_TIPODOC,
-                                    CCO_SIGLA = dd.CCO_SIGLA
+                                   select new Rep_Cons_Cartera_Interneta
+                                   {
+                                       DOC = dd.DOC,
+                                       DDO_DEBCRE = dd.DDO_DEBCRE,
+                                       DDO_CODCLIPRO = dd.DDO_CODCLIPRO,
+                                       CLI_NOMBRE = dd.CLI_NOMBRE,
+                                       DDO_MONTO = dd.DDO_MONTO,
+                                       DDO_FECHA_VEN = dd.DDO_FECHA_VEN,
+                                       DDO_FECHA_EMI = dd.DDO_FECHA_EMI,
+                                       CANCELA = dd.CANCELA,
+                                       SALDO = dd.SALDO,
+                                       SALDOT = dd.SALDOT,
+                                       CCO_TIPODOC = dd.CCO_TIPODOC,
+                                       CCO_SIGLA = dd.CCO_SIGLA
 
-                                }
-                               ).Where(c => c.DDO_CODCLIPRO == Cliente && c.DDO_DEBCRE == 2 && 
+                                   }
+                               ).Where(c => c.DDO_CODCLIPRO == Cliente && c.DDO_DEBCRE == 2 &&
                                c.DDO_FECHA_EMI > fechalimite)
                                .OrderBy(c => c.DDO_FECHA_EMI)
                                .ToListAsync();
@@ -788,9 +790,9 @@ public class CarteraService : ICarteraService
                     && ct.CRT_FECHA.HasValue && ct.CRT_FECHA.Value.Year == yearNow)
                 .Select(ct => new
                 {
-                    CRT_DOCTRAN = (ct.CRT_FECHA.HasValue ? ct.CRT_FECHA.Value.ToString("yyyy-MM-dd") : "") + "-" + ct.CRT_NUMERO ,
+                    CRT_DOCTRAN = (ct.CRT_FECHA.HasValue ? ct.CRT_FECHA.Value.ToString("yyyy-MM-dd") : "") + "-" + ct.CRT_NUMERO,
                     CRT_NUMERO = ct.CRT_NUMERO,
-                    CRT_AGENTE =ct.CRT_AGENTE
+                    CRT_AGENTE = ct.CRT_AGENTE
                 })
                 .Distinct()
                 .OrderByDescending(x => x.CRT_NUMERO)
@@ -850,7 +852,7 @@ public class CarteraService : ICarteraService
                     CRT_CANCELA_CH = ca.CRT_CANCELA_CH
                 }
             )
-            
+
             .ToListAsync();
 
 
@@ -894,11 +896,11 @@ public class CarteraService : ICarteraService
             await EnviaReporteAsync(auxGeneral.AuxDecimal ?? 0, auxGeneral.AGE_CODIGO ?? 0);
 
             var registros = await _context.CARTERA
-                        .Where(c => c.CRT_NUMERO == auxGeneral.AuxDecimal 
-                        && c.CRT_AGENTE == auxGeneral.AGE_CODIGO && c.CRT_ESTADO==2)
+                        .Where(c => c.CRT_NUMERO == auxGeneral.AuxDecimal
+                        && c.CRT_AGENTE == auxGeneral.AGE_CODIGO && c.CRT_ESTADO == 2)
                         .ToListAsync();
 
-                              
+
 
             if (registros != null || registros.Any())
             {
@@ -955,7 +957,7 @@ public class CarteraService : ICarteraService
         catch (Exception ex)
         {
             Console.WriteLine($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
-            _logger.LogError(" --------------------- ERROR ------------------ EnviaReporteAsync() " + ex.ToString() + numero+ agente);
+            _logger.LogError(" --------------------- ERROR ------------------ EnviaReporteAsync() " + ex.ToString() + numero + agente);
             throw;
         }
     }
@@ -967,33 +969,54 @@ public class CarteraService : ICarteraService
         var response = new ServiceResponse<object>();
         try
         {
-            
+
+            var preciosPermitidosNav = new HashSet<decimal>();
+            if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+            {
+                preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+            }
+
             var hoy = DateTime.Now;
 
-            var resultado = await( _context.REP_CART_VEN_INT_T
-                .Where(p => p.AGE_CODIGO == agente &&
-                    // primer bloque “normal”
-                    (
-                        (!p.DOC.StartsWith("NCC")
-                            || (p.DOC.StartsWith("NCC")
-                                && p.DDO_FECHA_VEN >= hoy.AddDays(-8)))
-                     && (!p.DOC.StartsWith("REC")
-                            || (p.DOC.StartsWith("REC")
-                                && p.DDO_FECHA_VEN >= hoy.AddDays(-5)))
-                    )
-                    ||
-                    // no muestra “navideños”
-                    (
-                        p.CLI_LISTAPRE == 90000183
-                     && (!p.DOC.StartsWith("NCC")
-                            || (p.DOC.StartsWith("NCC")
-                                && p.DDO_FECHA_VEN >= hoy.AddDays(-90)))
-                     && (!p.DOC.StartsWith("REC")
-                            || (p.DOC.StartsWith("REC")
-                                && p.DDO_FECHA_VEN >= hoy.AddDays(-90)))
-                    )
+            var resultado = await (_context.REP_CART_VEN_INT_T
+                  .Where(p =>
+
+
+        (
+
+            (
+
+                p.AGE_CODIGO == agente
+                &&
+                (
+                    (!p.DOC.StartsWith("NCC") || (p.DOC.StartsWith("NCC") && p.DDO_FECHA_VEN >= hoy.AddDays(-8)))
+                    &&
+                    (!p.DOC.StartsWith("REC") || (p.DOC.StartsWith("REC") && p.DDO_FECHA_VEN >= hoy.AddDays(-5)))
                 )
-                .Select(p => new {
+            )
+            ||
+
+            (
+
+                p.AGE_CODIGO == agente
+                &&
+                 preciosPermitidosNav.Contains(p.CLI_LISTAPRE ?? 0) //. == 90000183
+                &&
+                (
+                    (!p.DOC.StartsWith("NCC") || (p.DOC.StartsWith("NCC") && p.DDO_FECHA_VEN >= hoy.AddDays(-90)))
+                    &&
+                    (!p.DOC.StartsWith("REC") || (p.DOC.StartsWith("REC") && p.DDO_FECHA_VEN >= hoy.AddDays(-90)))
+                )
+            )
+        )
+    )
+
+                .Select(p => new
+                {
                     p.CLI_NOMBRE,
                     p.CUE_NOMBRE,
                     p.DOC,
@@ -1025,7 +1048,7 @@ public class CarteraService : ICarteraService
             response.Success = false;
             response.Message = ex.ToString();
             response.Data = null;
-            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraCompletaAsync() " + ex.ToString()  + agente);
+            _logger.LogError(" --------------------- ERROR ------------------ GetCarteraCompletaAsync() " + ex.ToString() + agente);
         }
         return response;
     }
@@ -1039,7 +1062,7 @@ public class CarteraService : ICarteraService
         {
             var referencias = await _context.REP_REFERENCIAS_DEV_INFOA
                             .Where(r => (r.CCO_AGENTE == agente))
-                                        //r.CMO_REFERENCIA.ToUpper().Contains("AL"))
+                            //r.CMO_REFERENCIA.ToUpper().Contains("AL"))
                             .Select(r => new
                             {
                                 CMO_REFERENCIA = r.CMO_REFERENCIA,
@@ -1085,7 +1108,7 @@ public class CarteraService : ICarteraService
 
             var totalDefault = totalValues.FirstOrDefault();
 
-            
+
             var ccomData = await (
                 from ccom in _context.CCOMPROBA
                 join cmov in _context.CMOVINV on ccom.CCO_CODIGO equals cmov.CMO_CCO_COMPROBA into cmovJoin
@@ -1152,7 +1175,7 @@ public class CarteraService : ICarteraService
         try
         {
             var result = await _context.VL_NCC_IDC_LDV
-                                .Where(v=>v.ID_IDC_NR == codigo)
+                                .Where(v => v.ID_IDC_NR == codigo)
                                 .ToListAsync();
 
 
@@ -1274,21 +1297,21 @@ public class CarteraService : ICarteraService
         try
         {
             var _result = await (from cc in _context.CCOMPROBA
-                               join dm in _context.DMOVINVI on cc.CCO_CODIGO equals dm.DMO_CMO_COMPROBA
-                               join pr in _context.PRODUCTO on dm.DMO_PRODUCTO equals pr.PRO_CODIGO
-                               join um in _context.UMEDIDA on dm.DMO_UDIGITADA equals um.UMD_CODIGO
-                               join td in _context.TIPODEV on dm.DMO_TIPODEV equals td.TDE_CODIGO
-                               where cc.CCO_CODIGO == codigo
-                               select new
-                               {
-                                  pr.PRO_ID,
-                                  pr.PRO_NOMBRE, 
-                                  um.UMD_ID, 
-                                  dm.DMO_CDIGITADA, 
-                                  td.TDE_NOMBRE, // MOTIVO
-                                  dm.DMO_EMPRESA, 
-                                  dm.DMO_FAC_COMPROBA
-                               }
+                                 join dm in _context.DMOVINVI on cc.CCO_CODIGO equals dm.DMO_CMO_COMPROBA
+                                 join pr in _context.PRODUCTO on dm.DMO_PRODUCTO equals pr.PRO_CODIGO
+                                 join um in _context.UMEDIDA on dm.DMO_UDIGITADA equals um.UMD_CODIGO
+                                 join td in _context.TIPODEV on dm.DMO_TIPODEV equals td.TDE_CODIGO
+                                 where cc.CCO_CODIGO == codigo
+                                 select new
+                                 {
+                                     pr.PRO_ID,
+                                     pr.PRO_NOMBRE,
+                                     um.UMD_ID,
+                                     dm.DMO_CDIGITADA,
+                                     td.TDE_NOMBRE, // MOTIVO
+                                     dm.DMO_EMPRESA,
+                                     dm.DMO_FAC_COMPROBA
+                                 }
                                ).ToListAsync();
 
 
@@ -1299,11 +1322,11 @@ public class CarteraService : ICarteraService
                 result.Add(new
                 {
                     FACTURA = numero,
-                    ID= item.PRO_ID,
-                    PRODUCTO= item.PRO_NOMBRE,
-                    UNIDAD= item.UMD_ID,
-                    CANTIDAD= item.DMO_CDIGITADA,
-                    MOTIVO= item.TDE_NOMBRE
+                    ID = item.PRO_ID,
+                    PRODUCTO = item.PRO_NOMBRE,
+                    UNIDAD = item.UMD_ID,
+                    CANTIDAD = item.DMO_CDIGITADA,
+                    MOTIVO = item.TDE_NOMBRE
                 });
             }
 
@@ -1328,7 +1351,7 @@ public class CarteraService : ICarteraService
         }
         return respuesta;
     }
-       
+
     public async Task<string?> ObtenerNumeroComprobanteAsync(int cco_empresa, decimal cco_codigo)
     {
         // Aumenta el tamaño del parámetro para evitar errores de tamaño

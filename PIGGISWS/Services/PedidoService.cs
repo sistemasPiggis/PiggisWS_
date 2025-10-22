@@ -969,7 +969,8 @@ public class PedidoService : IPedidoService
                     r.TOTAL_LIBRAS,
                     r.TOTAL_CON_DESCUENTOS,
                     r.DFAC_SECUENCIA,
-                    r.DFAC_CDIGITADA
+                    r.DFAC_CDIGITADA, 
+                    r.CLI_NOMBRE
                 })
                 .Select(g => new
                 {
@@ -980,7 +981,8 @@ public class PedidoService : IPedidoService
                     TOTAL_KILOS = g.Key.TOTAL_LIBRAS,
                     TOTAL_CON_DESCUENTOS = g.Key.TOTAL_CON_DESCUENTOS,
                     DFAC_SECUENCIA = g.Key.DFAC_SECUENCIA,
-                    DFAC_CDIGITADA = g.Key.DFAC_CDIGITADA
+                    DFAC_CDIGITADA = g.Key.DFAC_CDIGITADA,
+                    CLI_NOMBRE = g.Key.CLI_NOMBRE
                 })
                 .OrderByDescending(r => r.CCO_FECHA)
                 .ToListAsync();
