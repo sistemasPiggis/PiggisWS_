@@ -1065,10 +1065,11 @@ public class CarteraService : ICarteraService
                             //r.CMO_REFERENCIA.ToUpper().Contains("AL"))
                             .Select(r => new
                             {
+                                CLI_NOMBRE = r.CLI_NOMBRE,
                                 CMO_REFERENCIA = r.CMO_REFERENCIA,
                                 CMO_CCO_COMPROBA = r.CCO_CODIGO,
-                                REFERENCIA = r.CMO_REFERENCIA,
-                                CLI_NOMBRE = r.CLI_NOMBRE
+                                REFERENCIA = r.CMO_REFERENCIA
+                                
                             })
                             .ToListAsync();
 

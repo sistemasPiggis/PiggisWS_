@@ -515,7 +515,7 @@ public class DevolucionesService : IDevolucionesService
             var resultados = data
                 .Select(x => new
                 {
-                    ZON_NOMBRE = (x.FECHA.HasValue ? x.FECHA.Value.ToString("yyyy-MM-dd") : "") + " - " + x.NUMERO.ToString() + " - " +  x.CLIENTE,
+                    ZON_NOMBRE = x.CLIENTE + " " + (  x.FECHA.HasValue ? x.FECHA.Value.ToString("yyyy-MM-dd") : "") + " - " + x.NUMERO.ToString() + " - "  ,
                     CRT_DOCTRAN = x.CODIGO.ToString() + x.SOURCE
                 })
                 //.OrderByDescending(x => DateTime.TryParse(x.ZON_NOMBRE.Split(" - ")[0], out var fecha) ? fecha : DateTime.MinValue)
