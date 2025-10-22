@@ -103,11 +103,11 @@ public class DevolucionesService : IDevolucionesService
 
     public async Task<ServiceResponse<object>> GetProDevMotivoseAsync()
     {
-        var response = new ServiceResponse<object>();
+        var response = new ServiceResponse<object>(); 
         try
         {
             var result = await (
-                                from m in _context.REP_MOTIVOS_DEV
+                                from m in _context.REP_MOTIVOS_DEV_APP
                                 where m.TDE_EMPRESA == p_empresa && (m.TDE_INACTIVO ?? 0) == 0
                                 select new
                                 {
@@ -528,7 +528,7 @@ public class DevolucionesService : IDevolucionesService
                          join A in _context.AGENTE on D.AGENTE_FK equals A.AGE_CODIGO
                          join P in _context.PRODUCTO on D.PRODUCTO_FK equals P.PRO_CODIGO
                          join U in _context.UMEDIDA on P.PRO_UNIDAD equals U.UMD_CODIGO
-                         join RV in _context.REP_MOTIVOS_DEV on D.MOTIVO_FK equals RV.TDE_CODIGO
+                         join RV in _context.REP_MOTIVOS_DEV_APP on D.MOTIVO_FK equals RV.TDE_CODIGO
                          where D.AGENTE_FK == dev.AuxDecimal //// trae el agente
                             && (D.ID_DEVOLUCION_NR.ToString() + "A") == dev.AuxString // 
                          select new
@@ -547,7 +547,7 @@ public class DevolucionesService : IDevolucionesService
                          join C in _context.CLIENTE on DC.DEV_CLIENTE equals C.CLI_CODIGO
                          join A in _context.AGENTE on DC.DEV_AGENTE equals A.AGE_CODIGO
                          join U in _context.UMEDIDA on D.DVD_UNIDAD equals U.UMD_CODIGO
-                         join RV in _context.REP_MOTIVOS_DEV on D.DVD_MOTIVO equals RV.TDE_CODIGO into RVLeft
+                         join RV in _context.REP_MOTIVOS_DEV_APP on D.DVD_MOTIVO equals RV.TDE_CODIGO into RVLeft
                          from RV in RVLeft.DefaultIfEmpty()
                          where (D.DVD_CODIGO.ToString() + "N") == Convert.ToString(dev.AuxString)
                          select new

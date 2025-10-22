@@ -2,7 +2,7 @@
 
 namespace PIGGISWS.Models.Vistas;
 
-public class Rep_Motivos_Dev
+public class Rep_Motivos_Dev_App
 {
     public string TDE_NOMBRE {  get; set; } =string.Empty;
     public decimal TDE_CODIGO { get; set; }
