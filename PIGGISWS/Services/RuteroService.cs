@@ -56,7 +56,8 @@ public class RuteroService : IRuteroService
                     RUT_CLIENTE = cliente,
                     RUT_ZONA = zona,
                     RUT_PEDIDO = 1,
-                    RUT_VISITA = 1
+                    RUT_VISITA = 1,
+                    RUT_COBRO = 0
 
                 };
                 await _context.RUTERO.AddAsync(_rutero);
@@ -113,7 +114,7 @@ public class RuteroService : IRuteroService
     }
 
 
-    public async Task<ServiceResponse<object>> ValidaHoraPedidoAsync(decimal agente, DateTime fecha)
+    public async Task<ServiceResponse<object>> ValidaHoraPedidoAsync(decimal agente, DateTime fecha, int almacen)
     {
         var response = new ServiceResponse<object>();
         System.DayOfWeek dayOfWeek = fecha.DayOfWeek;
@@ -128,11 +129,11 @@ public class RuteroService : IRuteroService
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
 
-        var _hora1 = await _context.AGENTE_CALENDARIO_PEDIDO.Where(c=>c.AGE_ID_EMPLEADO_FK == agente && c.AGE_DIA == dayformateado)
+        var _hora1 = await _context.AGENTE_CALENDARIO_PEDIDO.Where(c=>c.AGE_ID_EMPLEADO_FK == agente && c.AGE_DIA == dayformateado && c.AGE_ID_ALMACEN == almacen)
             .Select(c=> c.AGE_HORA_INICIO)
             .ToListAsync();
         var hora1 = _hora1.FirstOrDefault();
-        var _hora2 = await _context.AGENTE_CALENDARIO_PEDIDO.Where(c => c.AGE_ID_EMPLEADO_FK == agente && c.AGE_DIA == dayformateado)
+        var _hora2 = await _context.AGENTE_CALENDARIO_PEDIDO.Where(c => c.AGE_ID_EMPLEADO_FK == agente && c.AGE_DIA == dayformateado && c.AGE_ID_ALMACEN == almacen)
             .Select(c => c.AGE_HORA_CIERRE)
             .ToListAsync();
         var hora2 = _hora2.FirstOrDefault();

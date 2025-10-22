@@ -84,7 +84,7 @@ public class DevolucionController : ControllerBase
         }
         else
         {
-            _logger.LogInformation("Ccomprobai: {@auxNuevaDevolucion.Cabecera}", auxNuevaDevolucion.Cabecera);
+            _logger.LogInformation("auxNuevaDevolucion.Cabecera: {@auxNuevaDevolucion.Cabecera}", auxNuevaDevolucion.Cabecera);
         }
 
         if (auxNuevaDevolucion.Ext == null)
@@ -93,16 +93,16 @@ public class DevolucionController : ControllerBase
         }
         else
         {
-            _logger.LogInformation("Ccomfaci: {@auxNuevaDevolucion.Ext}", auxNuevaDevolucion.Ext);
+            _logger.LogInformation("auxNuevaDevolucion.Ext: {@auxNuevaDevolucion.Ext}", auxNuevaDevolucion.Ext);
         }
 
         if (auxNuevaDevolucion.Detalle == null || !auxNuevaDevolucion.Detalle.Any())
         {
-            _logger.LogError("DFacturai está vacío o no contiene elementos.");
+            _logger.LogError("auxNuevaDevolucion.Detalle está vacío o no contiene elementos.");
         }
         else
         {
-            _logger.LogInformation("DFacturai: {@auxNuevaDevolucion.Detalle}", auxNuevaDevolucion.Detalle);
+            _logger.LogInformation("auxNuevaDevolucion.Detalle: {@auxNuevaDevolucion.Detalle}", auxNuevaDevolucion.Detalle);
         }
 
         var response = await _devolucionesService.CreateDevolucionAsync(auxNuevaDevolucion);
@@ -110,11 +110,11 @@ public class DevolucionController : ControllerBase
         if (response.Success)
         {
             response.Status = Response.StatusCode;
-            _logger.LogInformation("Pedido creado exitosamente: {@Response}", response);
+            _logger.LogInformation("devolucion creada exitosamente: {@Response}", response);
             return Ok(response);
         }
 
-        _logger.LogError("Error al crear el pedido: {Message}", response.Message);
+        _logger.LogError("Error al crear el devolucion: {Message}", response.Message);
         return BadRequest(response.Message);
     }
 

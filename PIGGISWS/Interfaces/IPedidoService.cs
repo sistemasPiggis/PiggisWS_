@@ -15,4 +15,8 @@ public interface IPedidoService
     Task<ServiceResponse<object>> GetFacsxClienteAsync(decimal request);
     Task<ServiceResponse<object>> GetFacDetalleAsync(Rep_Cantidades_Pedidosa request);
     Task<ServiceResponse<object>> GetEnvHoyAsync(decimal agente);
+    Task<ServiceResponse<object>> CreatePedidoNavAsync(AuxNuevoPedidoNav auxNuevoPedidoNav);
+    Task<ServiceResponse<object>> GetPedidosNavidadAsync(decimal agente);
+
+    Task<ServiceResponse<object>> GetPedidoNavidadDAsync(AuxGeneral auxGeneral);
 }

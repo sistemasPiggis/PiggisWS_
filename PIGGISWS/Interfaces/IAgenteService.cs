@@ -10,4 +10,5 @@ public interface IAgenteService
     Task<ServiceResponse<object>> GetAgentes();
     Task<string> GetUsuarioAsync(decimal agente);
     Task<ServiceResponse<object>> GetCodigoAgentexMailAsync(string mail);
+    Task<decimal> GetCodigoAgentexClientesync(decimal cli_codigo);
 }

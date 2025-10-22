@@ -3,19 +3,26 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using PIGGISWS.Data;
+using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
+using PIGGISWS.Models.Auxiliares;
+using PIGGISWS.Services;
 
 namespace PIGGISWS.Controllers;
 [ApiController]
 [Route("[controller]")]
 public class MenuController : ControllerBase
 {
+    private readonly IMenuService _menuservice;
+    private readonly ILogger<PedidoController> _logger;
     private readonly ApplicationDbContext _context;
     ModelResponse model = new ModelResponse();
     Menu_Movil menu = new Menu_Movil();
-    public MenuController(ApplicationDbContext context)
+    public MenuController(ApplicationDbContext context, IMenuService menuService, ILogger<PedidoController> logger)
     {
         _context = context;
+        _menuservice = menuService;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -59,4 +66,26 @@ public class MenuController : ControllerBase
             return respuesta;
         }
     }
+
+
+    [Authorize]
+    [HttpPost("GetMenusMovilAsync")]
+
+    public async Task<IActionResult> GetMenusMovilAsync()
+    {
+
+
+
+        var response = await _menuservice.GetMenusMovilAsync();
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
 }

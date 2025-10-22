@@ -113,19 +113,37 @@ public class ApplicationDbContext : DbContext
     public DbSet<Tmp_Dev_Pro_Cli_Age> TMP_DEV_PROD_CLI_AGE { get; set; }
     public DbSet<REP_DET_ESTADO_DESPACHO_PED> REP_DET_ESTADO_DESPACHO_PED { get; set; }
     public DbSet<REP_CART_VEN_INT_T> REP_CART_VEN_INT_T { get; set; }
-    
 
+    public DbSet<CLASIFPROD> CLASIFPROD { get; set; }
+    public DbSet<GPRODUCTO> GPRODUCTO { get; set; }
+
+    public DbSet<GEN_MENSAJERIA> GEN_MENSAJERIA { get; set; }
+    public DbSet<TDS_PEDIDO_NAV_DET> TDS_PEDIDO_NAV_DET { get; set; }
+    public DbSet<TDS_PEDIDOS_NAV_CAB> TDS_PEDIDOS_NAV_CAB { get; set; }
+
+    public decimal F_CXC_SALDO_CARTERA_PED_ST_NR(int empresa, decimal clienteCodigo)
+               => throw new NotSupportedException();
+
+    public DateTime F_VNT_FECHA_FACTURAR_DT(int empresa, decimal clienteCodigo, decimal agente)
+        => throw new NotSupportedException();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agente>()
             .HasKey(a => new { a.AGE_CODIGO, a.AGE_EMPRESA });
-        modelBuilder.Entity<Tmp_Dev_Pro_Cli_Age>()
-            .HasKey(a => new { a.CODIGO_PK });
+        modelBuilder.Entity<TDS_PEDIDO_NAV_DET>()
+            .HasKey(a => new { a.ID_PEDIDO_DET });
 
+        modelBuilder.Entity<TDS_PEDIDOS_NAV_CAB>()
+           .HasKey(a => new { a.ID_PEDIDO_NAV });
+
+        modelBuilder.Entity<Tmp_Dev_Pro_Cli_Age>()
+           .HasKey(a => new { a.CODIGO_PK });
         modelBuilder.Entity<Clientes_Nuevos>()
             .HasKey(cn => new { cn.ID_SECUENCIA_PK });
 
+        modelBuilder.Entity<GEN_MENSAJERIA>()
+           .HasKey(cn => new { cn.ID_MENSAJE });
 
         modelBuilder.Entity<Cliente_Dia_Gestion_Nuevo>()
             .HasKey(cd => new { cd.ID_SECUENCIA_PK });
@@ -144,6 +162,14 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Parametros_Movil>()
        .HasKey(pa => new { pa.CODIGO });
+
+
+        modelBuilder.Entity<CLASIFPROD>()
+          .HasKey(a => new { a.CPR_CODIGO });
+
+        modelBuilder.Entity<GPRODUCTO>()
+         .HasKey(a => new { a.GPR_CODIGO });
+
         #region Vistas
         modelBuilder.Entity<Vw_Insepector_Calidad>().ToTable("VW_INSEPECTOR_CALIDAD").HasKey(c => c.ID); // trae las vistas de la BD
 
@@ -168,6 +194,16 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<REP_DET_ESTADO_DESPACHO_PED>().ToTable("REP_DET_ESTADO_DESPACHO_PED").HasKey(a => new { a.FAC, a.ESTADO_DESPACHO, a.CLI_NOMBRE });
         modelBuilder.Entity<REP_CART_VEN_INT_T>().ToTable("REP_CART_VEN_INT_T").HasKey(a => new { a.DOC, a.AGE_CODIGO, a.CLI_CLAVE });
         #endregion
+
+       
+
+    modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
+                .GetMethod(nameof(F_CXC_SALDO_CARTERA_PED_ST_NR), new[] { typeof(int), typeof(decimal) }))
+                .HasName("F_CXC_SALDO_CARTERA_PED_ST_NR");
+
+        modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
+            .GetMethod(nameof(F_VNT_FECHA_FACTURAR_DT), new[] { typeof(int), typeof(decimal), typeof(decimal) }))
+            .HasName("F_VNT_FECHA_FACTURAR_DT");
         modelBuilder.Entity<Usuario>()
             .HasKey(u => u.USR_CODIGO);
 
@@ -298,10 +334,8 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Pre_Ventas_Anual>()
            .HasKey(a => new { a.PVA_CODIGO_PK, a.PVA_EMPRESA_FK });
 
-
-
         modelBuilder.Entity<NextVal>()
-     .HasKey(u => new { u.NextVl });
+            .HasKey(u => new { u.NextVl });
 
         modelBuilder.Entity<SaldoCarteraResult>().HasNoKey();
 

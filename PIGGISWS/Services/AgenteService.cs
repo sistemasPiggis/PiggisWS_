@@ -193,4 +193,24 @@ public class AgenteService: IAgenteService
         }
 
     }
+
+
+    public async Task<decimal> GetCodigoAgentexClientesync(decimal cli_codigo)
+    {
+        
+        try
+        {
+            var cliente = await _context.CLIENTE
+                .Where(c => c.CLI_CODIGO == cli_codigo).ToListAsync();
+            decimal agente = cliente.Select(c => c.CLI_AGENTE).FirstOrDefault() ?? 0;
+
+            return agente;
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ GetCodigoAgentexMailAsync() " + ex.ToString() + cli_codigo);
+            return 0;
+        }
+
+    }
 }

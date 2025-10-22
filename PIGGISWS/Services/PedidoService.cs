@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
@@ -21,6 +22,7 @@ public class PedidoService : IPedidoService
     private readonly IRuteroService _ruteroService;
     private readonly IAgenteService _agenteService;
     private readonly ILogger<PedidoService> _logger;
+    private readonly IMensajeriaService _mensajeriaService;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
 
     #region Prop
@@ -63,7 +65,8 @@ public class PedidoService : IPedidoService
     int p_pedd_totimpuesto;
     int p_ped_cfac_orden;
     #endregion
-    public PedidoService(ApplicationDbContext context, IProductoService productoService, IRuteroService ruteroService, IAgenteService agenteService, ILogger<PedidoService> logger)
+    public PedidoService(ApplicationDbContext context, IProductoService productoService, IRuteroService ruteroService, 
+                        IAgenteService agenteService, ILogger<PedidoService> logger, IMensajeriaService mensajeriaService)
     {
         _logger = logger;
         _productoService = productoService;
@@ -71,6 +74,7 @@ public class PedidoService : IPedidoService
         _agenteService = agenteService;
         _context = context;
         GetParametros();
+        _mensajeriaService = mensajeriaService;
     }
     public void GetParametros()
     {
@@ -116,7 +120,8 @@ public class PedidoService : IPedidoService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.ToString());
+ 
+            _logger.LogError(" --------------------- ERROR ------------------ GetParametros Pedidos " + ex.ToString());
         }
     }
 
@@ -138,8 +143,17 @@ public class PedidoService : IPedidoService
                                  && siglapedidod.Contains(cc.CCO_SIGLA)
                                  && cc.CCO_FECHA >= p_fecha_pedido
                                  && cc.CCO_CODCLIPRO == cliente
-                                 group new { cc, df } by new { cc.CCO_NUMERO, cc.CCO_FECHA, ct.CTI_NOMBRE, cc.CCO_DETALLE, //cc.CCO_CODIGO, 
-                                     cc.CCO_DIA, cc.CCO_PERIODO, cc.CCO_CIE_COMPROBA, cc.CCO_AGENTE, cc.CCO_MES 
+                                 group new { cc, df } by new
+                                 {
+                                     cc.CCO_NUMERO,
+                                     cc.CCO_FECHA,
+                                     ct.CTI_NOMBRE,
+                                     cc.CCO_DETALLE, //cc.CCO_CODIGO, 
+                                     cc.CCO_DIA,
+                                     cc.CCO_PERIODO,
+                                     cc.CCO_CIE_COMPROBA,
+                                     cc.CCO_AGENTE,
+                                     cc.CCO_MES
                                  } into g
                                  select new
                                  {
@@ -156,11 +170,11 @@ public class PedidoService : IPedidoService
                                      //CCO_CIE_COMPROBA = g.Key.CCO_CIE_COMPROBA,
                                      CCO_AGENTE = g.Key.CCO_AGENTE
                                  }
-                                ).OrderByDescending(o=>o.CCO_FECHA).ToListAsync();
+                                ).OrderByDescending(o => o.CCO_FECHA).ToListAsync();
 
 
 
-            
+
 
 
 
@@ -292,9 +306,9 @@ public class PedidoService : IPedidoService
                 DFAC_CANTIDAD = r.DFAC_CANTIDAD,
                 DFAC_TOTAL = r.DFAC_TOTAL,
                 PRO_NOMBRE = r.PRO_NOMBRE,
-                DFAC_SECUENCIA = r.DFAC_SECUENCIA ,
+                DFAC_SECUENCIA = r.DFAC_SECUENCIA,
 
-            }).OrderBy(d =>d.DFAC_SECUENCIA).ToList();
+            }).OrderBy(d => d.DFAC_SECUENCIA).ToList();
 
             var pedido = new AuxPedido
             {
@@ -331,6 +345,9 @@ public class PedidoService : IPedidoService
     {
         var response = new ServiceResponse<object>();
         var valiped = new ServiceResponse<object>();
+        DateTime _fecha = DateTime.Now;
+        var _almacen = await _context.BODEGA.Where(b => b.BOD_CODIGO == auxNuevoPedidos.Ccomprobai.CCO_BODEGA).ToListAsync();
+        int almacen = _almacen.Select(a => a.BOD_ALMACEN).FirstOrDefault() ?? 0;
         valiped = await ValidaPedExisteAsync(auxNuevoPedidos);
         if (valiped.Success)
         {
@@ -354,9 +371,10 @@ public class PedidoService : IPedidoService
                 Success = true
             };
             return response;
-        };
+        }
+        ;
 
-        var horario = await _ruteroService.ValidaHoraPedidoAsync(auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0, auxNuevoPedidos.Ccomprobai.CCO_FECHA);
+        var horario = await _ruteroService.ValidaHoraPedidoAsync(auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0, _fecha, almacen);
         if (horario.Data != null)
         {
             if (horario.Success == false)
@@ -416,7 +434,7 @@ public class PedidoService : IPedidoService
         int periodo = DateTime.Now.Year;
         int mes = DateTime.Now.Month;
         int dia = DateTime.Now.Day;
-        DateTime _fecha = DateTime.Now;
+       
         DateTime fecha = auxNuevoPedidos.Ccomprobai.CCO_FECHA;
         decimal cco_codigo = 0;
 
@@ -436,8 +454,7 @@ public class PedidoService : IPedidoService
                     var result = await command.ExecuteScalarAsync();
                     cco_codigo = Convert.ToDecimal(result);
                 }
-                var _almacen = await _context.BODEGA.Where(b => b.BOD_CODIGO == auxNuevoPedidos.Ccomprobai.CCO_BODEGA).ToListAsync();
-                int almacen = _almacen.Select(a => a.BOD_ALMACEN).FirstOrDefault() ?? 0;
+                
 
                 var _numero = await _context.DTIPOCOM.Where(d => d.DTI_CTI_CODIGO == p_ped_sigla
                                                             && d.DTI_PERIODO == periodo && d.DTI_ALMACEN == almacen && d.DTI_SERIE == p_ped_serie).ToListAsync();
@@ -445,11 +462,11 @@ public class PedidoService : IPedidoService
 
                 var _clientes = await _context.CLIENTE.Where(c => c.CLI_CODIGO == auxNuevoPedidos.Ccomprobai.CCO_CODCLIPRO).ToListAsync();
                 var _cliente = _clientes.FirstOrDefault();
-                decimal lprecio = _clientes.Select(l =>l.CLI_LISTAPRE).FirstOrDefault() ?? 0;
+                decimal lprecio = _clientes.Select(l => l.CLI_LISTAPRE).FirstOrDefault() ?? 0;
                 var _impuesto_v = await _context.SISTEMA.Where(i => i.SIS_CODIGO == 1).ToListAsync();
                 var _imp_porcentaje = await _context.IMPUESTO.Where(i => i.IMP_CODIGO == _impuesto_v.Select(z => z.SIS_IMPUESTO_VENTA).FirstOrDefault()).ToListAsync();
 
-                var _politicas = await _context.POLITICA.Where(p => p.POL_CODIGO == _cliente.CLI_POLITICAS).ToListAsync(); 
+                var _politicas = await _context.POLITICA.Where(p => p.POL_CODIGO == _cliente.CLI_POLITICAS).ToListAsync();
                 var _politica = _politicas.FirstOrDefault();
                 var ccomprobai = new CComprobai
                 {
@@ -462,7 +479,7 @@ public class PedidoService : IPedidoService
                     CCO_DOCTRAN = p_ped_doctran,
                     CCO_TIPODOC = p_ped_tipodoc,
                     CCO_FECHA = _fecha.Date,
-                    CCO_DETALLE = auxNuevoPedidos.Ccomprobai.CCO_DETALLE ?? p_ped_doctran ,
+                    CCO_DETALLE = auxNuevoPedidos.Ccomprobai.CCO_DETALLE ?? p_ped_doctran,
                     CCO_MODULO = p_ped_modulo,
                     CCO_NOCONTABLE = p_ped_notcontable,
                     CCO_ESTADO = p_ped_estado,
@@ -473,7 +490,7 @@ public class PedidoService : IPedidoService
                     CCO_TIPO_CAMBIO = p_ped_tipocambio,
                     CCO_TCLIPRO = p_ped_tclipro,
                     CCO_CODCLIPRO = auxNuevoPedidos.Ccomprobai.CCO_CODCLIPRO,
-                    CCO_AGENTE = auxNuevoPedidos.Ccomprobai.CCO_AGENTE ??0,
+                    CCO_AGENTE = auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0,
                     CCO_TRANSACC = p_ped_trasacc,
                     CCO_ANULADO = p_ped_anulado,
                     CCO_BODEGA = auxNuevoPedidos.Ccomprobai.CCO_BODEGA,
@@ -510,7 +527,7 @@ public class PedidoService : IPedidoService
                         CFAC_FECHA_FAC = auxNuevoPedidos.Ccomfaci?.CFAC_FECHA_FAC?.Date ?? _fecha.Date,
                         CFAC_TIPOPAGO = p_ped_tipopago,
                         CFAC_COMISION = p_ped_comision,
-                        CFAC_IMPRIMIO = p_ped_imprimio, 
+                        CFAC_IMPRIMIO = p_ped_imprimio,
                         //CFAC_ORDEN = null, //p_ped_cfac_orden,
                         //CFAC_PEDIDO =  p_ped_cfac_orden
 
@@ -527,7 +544,8 @@ public class PedidoService : IPedidoService
                             {
                                 descuento ??= new DListadsc(); // Inicializa descuento si es null
                                 descuento.DLD_PORCENTAJE = 0;
-                            };
+                            }
+                            ;
 
                             var dfaturai = new DFacturai
                             {
@@ -551,7 +569,7 @@ public class PedidoService : IPedidoService
                                 DFAC_GRABAIVA = auxint.DFAC_GRABAIVA,
                                 DFAC_UDIGITADA = auxint.DFAC_UDIGITADA,
                                 DFAC_CDIGITADA = auxint.DFAC_CANTIDAD,
-                                
+
                                 DFAC_CEQ = null,
                                 DFAC_UEQ = null,
                                 DFAC_CANT_PEDIDA = auxint.DFAC_CANT_PEDIDA,
@@ -588,13 +606,13 @@ public class PedidoService : IPedidoService
                                 TOT_TOTAL = 0,
                                 TOT_PORC_IMPUESTO = 12,
                                 TOT_DESC1_0 = 0,
-                                TOT_DESC2_0 =0,
+                                TOT_DESC2_0 = 0,
                                 TOT_SUBTOT_0 = 0
                             };
                             await _context.TOTALI.AddAsync(totali);
                             int totalisave = await _context.SaveChangesAsync();
                             if (totalisave != 0)
-                            await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0); /// registra en el rutero visita y pedido
+                                await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0); /// registra en el rutero visita y pedido
                             string agente = await _agenteService.GetUsuarioAsync(ccomprobai.CCO_AGENTE ?? 0);
                             if (agente != null)
                             {
@@ -615,7 +633,7 @@ public class PedidoService : IPedidoService
 
                         }
                         //await transaction.CommitAsync();
-                        
+
                         response.Data = new { ccomprobai, listadfactura };
                         response.Success = true;
                         response.Message = "Pedido guardado Existosamente # de pedido = " + ccomprobai.CCO_CODIGO;
@@ -639,7 +657,7 @@ public class PedidoService : IPedidoService
         }
         catch (Exception ex)
         {
-          
+
             response.Data = auxNuevoPedidos;
             response.Success = false;
             response.Message = "Existió un problema por favor vuelva a intentarlo." + ex.ToString();
@@ -649,7 +667,7 @@ public class PedidoService : IPedidoService
 
     }
 
-   
+
 
     public async Task<decimal> GetPrecioAsync(decimal lprecio, decimal cproducto)
     {
@@ -680,7 +698,7 @@ public class PedidoService : IPedidoService
             _logger.LogError(" --------------------- ERROR ------------------ GetPrecioAsync " + ex.ToString());
             return 0;
         }
-        
+
     }
 
     public async Task<decimal> GetTotalPrecioAsync(decimal lprecio, decimal cproducto, decimal cdigitada)
@@ -689,21 +707,21 @@ public class PedidoService : IPedidoService
         DateTime d = fechaActual.Date;
 
         decimal total = 0;
-        var _pprecio = await _context.DLISTAPRE.Where(d => d.DLP_LISTAPRE == lprecio 
-                            && d.DLP_PRODUCTO == cproducto 
+        var _pprecio = await _context.DLISTAPRE.Where(d => d.DLP_LISTAPRE == lprecio
+                            && d.DLP_PRODUCTO == cproducto
                             && d.DLP_FECHA_INI <= fechaActual
                             && (d.DLP_FECHA_FIN == null || d.DLP_FECHA_FIN >= fechaActual)
-                            &&  (d.DLP_INACTIVO ?? 0) == 0)
+                            && (d.DLP_INACTIVO ?? 0) == 0)
             .Select(d => d.DLP_PRECIO)
             //.DefaultIfEmpty(0)
             .ToListAsync();
         decimal pprecio = _pprecio.FirstOrDefault();
-        if (pprecio != 0 && cdigitada !=0)
+        if (pprecio != 0 && cdigitada != 0)
         {
-             total = (pprecio * cdigitada);
+            total = (pprecio * cdigitada);
         }
         else { total = 0; }
-        return Math.Round(total,2);
+        return Math.Round(total, 2);
     }
 
 
@@ -754,7 +772,7 @@ public class PedidoService : IPedidoService
                     AGE_CODIGO = g.Key.AGE_CODIGO,
                     FACTURA = g.Key.FACTURA,
                     CREA_FECHA = g.Max(v => v.CREA_FECHA)
-                }).OrderBy(o =>o.CREA_FECHA)
+                }).OrderBy(o => o.CREA_FECHA)
                 .ToListAsync();
             if (pedidos == null || !pedidos.Any())
             {
@@ -847,29 +865,29 @@ public class PedidoService : IPedidoService
                             CLI_CODIGO = reader.GetDecimal(reader.GetOrdinal("CLI_CODIGO")),
                             CCO_PERIODO = reader.GetInt16(reader.GetOrdinal("CCO_PERIODO")),
                             CCO_MES = reader.GetInt16(reader.GetOrdinal("CCO_MES")),
-                            CCO_DIA=  reader.GetInt16(reader.GetOrdinal("CCO_DIA")), 
+                            CCO_DIA = reader.GetInt16(reader.GetOrdinal("CCO_DIA")),
                             CCO_CODIGO = reader.GetDecimal(reader.GetOrdinal("CCO_CODIGO")),
                             CFAC_FECHA_FAC = reader.GetDateTime(reader.GetOrdinal("CFAC_FECHA_FAC")),
                             DFAC_CANT_PEDIDA = reader.GetDecimal(reader.GetOrdinal("DFAC_CANT_PEDIDA"))
                         });
                     }
 
-                  if (pedidos == null || !pedidos.Any())
-            {
-                response.Data = null;
-                response.Success = true;
-                response.Message = Utils.FormatosTexto.DatosNoEncontrados;
-                return response;
-            }
-            else
-            {
-                response.Data = pedidos;
-                response.Success = true;
-                response.Message = Utils.FormatosTexto.DatosEncontrados;
-            }  
+                    if (pedidos == null || !pedidos.Any())
+                    {
+                        response.Data = null;
+                        response.Success = true;
+                        response.Message = Utils.FormatosTexto.DatosNoEncontrados;
+                        return response;
+                    }
+                    else
+                    {
+                        response.Data = pedidos;
+                        response.Success = true;
+                        response.Message = Utils.FormatosTexto.DatosEncontrados;
+                    }
                 }
             }
-           
+
             return response;
         }
         catch (Exception ex)
@@ -938,13 +956,21 @@ public class PedidoService : IPedidoService
             var result = await _context.REP_CANTIDADES_VENTAS_2009
                 .Where(r =>
                     r.CLI_CODIGO == request.CLI_CODIGO &&
-                    r.CCO_FECHA == request.CCO_FECHA && 
+                    r.CCO_FECHA == request.CCO_FECHA &&
                     r.AGE_CODIGO == request.AGE_CODIGO &&
                     r.DOC == request.DOC &&
                     r.CTI_ID == "FAC")
-                .GroupBy(r => new { r.DOC, r.CCO_FECHA, r.CLI_CODIGO, 
-                    r.PRO_NOMBRE, r.TOTAL_LIBRAS, r.TOTAL_CON_DESCUENTOS,
-                    r.DFAC_SECUENCIA, r.DFAC_CDIGITADA
+                .GroupBy(r => new
+                {
+                    r.DOC,
+                    r.CCO_FECHA,
+                    r.CLI_CODIGO,
+                    r.PRO_NOMBRE,
+                    r.TOTAL_LIBRAS,
+                    r.TOTAL_CON_DESCUENTOS,
+                    r.DFAC_SECUENCIA,
+                    r.DFAC_CDIGITADA, 
+                    r.CLI_NOMBRE
                 })
                 .Select(g => new
                 {
@@ -955,7 +981,8 @@ public class PedidoService : IPedidoService
                     TOTAL_KILOS = g.Key.TOTAL_LIBRAS,
                     TOTAL_CON_DESCUENTOS = g.Key.TOTAL_CON_DESCUENTOS,
                     DFAC_SECUENCIA = g.Key.DFAC_SECUENCIA,
-                    DFAC_CDIGITADA = g.Key.DFAC_CDIGITADA
+                    DFAC_CDIGITADA = g.Key.DFAC_CDIGITADA,
+                    CLI_NOMBRE = g.Key.CLI_NOMBRE
                 })
                 .OrderByDescending(r => r.CCO_FECHA)
                 .ToListAsync();
@@ -989,22 +1016,22 @@ public class PedidoService : IPedidoService
         var response = new ServiceResponse<object>();
         try
         {
-                    var pedidos = await _context.REP_PEDIDOS_INT_X_DAPP.Where(p => p.CCO_AGENTE == agente).OrderBy(o =>o.CLI_NOMBRE).ToListAsync();
-            
-                    if (pedidos == null || !pedidos.Any())
-                    {
-                        response.Data = null;
-                        response.Success = true;
-                        response.Message = Utils.FormatosTexto.DatosNoEncontrados;
-                        return response;
-                    }
-                    else
-                    {
-                        response.Data = pedidos;
-                        response.Success = true;
-                        response.Message = Utils.FormatosTexto.DatosEncontrados;
-                        return response;
-                    }
+            var pedidos = await _context.REP_PEDIDOS_INT_X_DAPP.Where(p => p.CCO_AGENTE == agente).OrderBy(o => o.CLI_NOMBRE).ToListAsync();
+
+            if (pedidos == null || !pedidos.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = Utils.FormatosTexto.DatosNoEncontrados;
+                return response;
+            }
+            else
+            {
+                response.Data = pedidos;
+                response.Success = true;
+                response.Message = Utils.FormatosTexto.DatosEncontrados;
+                return response;
+            }
 
         }
 
@@ -1047,12 +1074,12 @@ public class PedidoService : IPedidoService
                                                         .CountAsync(df => df.DFAC_CFAC_COMPROBA == pedidoR.CCO_CODIGO);
 
 
-                if (productosCandidatoCount == 1 && auxNuevoPedidos.DFacturai.Count == 1 )
+                if (productosCandidatoCount == 1 && auxNuevoPedidos.DFacturai.Count == 1)
                 {
                     var cantidadCandidatoS = await _context.DFACTURAI
                                                    .Where(df => df.DFAC_CFAC_COMPROBA == pedidoR.CCO_CODIGO)
                                                    .Select(df => df.DFAC_CANTIDAD).ToListAsync();
-                                      var cantidadCandidato = cantidadCandidatoS.FirstOrDefault();
+                    var cantidadCandidato = cantidadCandidatoS.FirstOrDefault();
 
 
                     var cantidadSolicitada = auxNuevoPedidos.DFacturai.FirstOrDefault().DFAC_CANTIDAD;
@@ -1060,64 +1087,64 @@ public class PedidoService : IPedidoService
                     // Si el detalle y la cantidad son iguales, se considera duplicado
                     if (pedidoR.CCO_DETALLE == auxNuevoPedidos.Ccomprobai.CCO_DETALLE && cantidadCandidato == cantidadSolicitada)
                         if (pedidoR.CCO_DETALLE == auxNuevoPedidos.Ccomprobai.CCO_DETALLE)
-                    {
-                        // Si el detalle del pedido ya existe, se considera duplicado
-                        var pedidoRS = await (from cc in _context.CCOMPROBAI
-                                              where cc.CCO_CODIGO == pedidoR.CCO_CODIGO
-
-                                              select new CComprobai
-                                              {
-                                                  CCO_EMPRESA = cc.CCO_EMPRESA,
-                                                  CCO_CODIGO = cc.CCO_CODIGO,
-                                                  CCO_PERIODO = cc.CCO_PERIODO,
-                                                  CCO_SIGLA = cc.CCO_SIGLA,
-                                                  CCO_ALMACEN = cc.CCO_ALMACEN,
-                                                  CCO_SERIE = cc.CCO_SERIE,
-                                                  CCO_DOCTRAN = cc.CCO_DOCTRAN,
-                                                  CCO_TIPODOC = cc.CCO_TIPODOC,
-                                                  CCO_FECHA = cc.CCO_FECHA,
-                                                  CCO_CONCEPTO = cc.CCO_CONCEPTO,
-                                                  CCO_MODULO = cc.CCO_MODULO,
-                                                  CCO_NOCONTABLE = cc.CCO_NOCONTABLE,
-                                                  CCO_ESTADO = cc.CCO_ESTADO,
-                                                  CCO_DESCUADRE = cc.CCO_DESCUADRE,
-                                                  CCO_ADESTINO = cc.CCO_ADESTINO,
-                                                  CCO_PVENTA = cc.CCO_PVENTA,
-                                                  CCO_CENTRO = cc.CCO_CENTRO,
-                                                  CCO_TIPO_CAMBIO = cc.CCO_TIPO_CAMBIO,
-                                                  CCO_TCLIPRO = cc.CCO_TCLIPRO,
-                                                  CCO_CODCLIPRO = cc.CCO_CODCLIPRO,
-                                                  CCO_AGENTE = cc.CCO_AGENTE,
-                                                  CCO_TRANSACC = cc.CCO_TRANSACC,
-                                                  CCO_ANULADO = cc.CCO_ANULADO,
-                                                  CCO_BODEGA = cc.CCO_BODEGA,
-                                                  CCO_DIA = cc.CCO_DIA,
-                                                  CCO_MES = cc.CCO_MES,
-                                                  CCO_ANIO = cc.CCO_ANIO,
-                                                  CCO_DETALLE = cc.CCO_DETALLE,
-                                                  CCO_NUMERO = cc.CCO_NUMERO
-                                              }).ToListAsync();
-                        var pedido = new AuxNuevoPedido
                         {
-                            Ccomprobai = pedidoRS.FirstOrDefault(),
+                            // Si el detalle del pedido ya existe, se considera duplicado
+                            var pedidoRS = await (from cc in _context.CCOMPROBAI
+                                                  where cc.CCO_CODIGO == pedidoR.CCO_CODIGO
 
-                        };
+                                                  select new CComprobai
+                                                  {
+                                                      CCO_EMPRESA = cc.CCO_EMPRESA,
+                                                      CCO_CODIGO = cc.CCO_CODIGO,
+                                                      CCO_PERIODO = cc.CCO_PERIODO,
+                                                      CCO_SIGLA = cc.CCO_SIGLA,
+                                                      CCO_ALMACEN = cc.CCO_ALMACEN,
+                                                      CCO_SERIE = cc.CCO_SERIE,
+                                                      CCO_DOCTRAN = cc.CCO_DOCTRAN,
+                                                      CCO_TIPODOC = cc.CCO_TIPODOC,
+                                                      CCO_FECHA = cc.CCO_FECHA,
+                                                      CCO_CONCEPTO = cc.CCO_CONCEPTO,
+                                                      CCO_MODULO = cc.CCO_MODULO,
+                                                      CCO_NOCONTABLE = cc.CCO_NOCONTABLE,
+                                                      CCO_ESTADO = cc.CCO_ESTADO,
+                                                      CCO_DESCUADRE = cc.CCO_DESCUADRE,
+                                                      CCO_ADESTINO = cc.CCO_ADESTINO,
+                                                      CCO_PVENTA = cc.CCO_PVENTA,
+                                                      CCO_CENTRO = cc.CCO_CENTRO,
+                                                      CCO_TIPO_CAMBIO = cc.CCO_TIPO_CAMBIO,
+                                                      CCO_TCLIPRO = cc.CCO_TCLIPRO,
+                                                      CCO_CODCLIPRO = cc.CCO_CODCLIPRO,
+                                                      CCO_AGENTE = cc.CCO_AGENTE,
+                                                      CCO_TRANSACC = cc.CCO_TRANSACC,
+                                                      CCO_ANULADO = cc.CCO_ANULADO,
+                                                      CCO_BODEGA = cc.CCO_BODEGA,
+                                                      CCO_DIA = cc.CCO_DIA,
+                                                      CCO_MES = cc.CCO_MES,
+                                                      CCO_ANIO = cc.CCO_ANIO,
+                                                      CCO_DETALLE = cc.CCO_DETALLE,
+                                                      CCO_NUMERO = cc.CCO_NUMERO
+                                                  }).ToListAsync();
+                            var pedido = new AuxNuevoPedido
+                            {
+                                Ccomprobai = pedidoRS.FirstOrDefault(),
 
-                        if (pedido.Ccomprobai == null)
-                        {
-                            response.Data = null;
-                            response.Success = false;
-                            response.Message = "PEDIDO NO EXISTE";
-                            return response;
+                            };
+
+                            if (pedido.Ccomprobai == null)
+                            {
+                                response.Data = null;
+                                response.Success = false;
+                                response.Message = "PEDIDO NO EXISTE";
+                                return response;
+                            }
+                            else
+                            {
+                                response.Data = pedido;
+                                response.Success = true;
+                                response.Message = "PEDIDO YA INGRESADO NÚMERO " + pedido?.Ccomprobai?.CCO_NUMERO;
+                                return response;
+                            }
                         }
-                        else
-                        {
-                            response.Data = pedido;
-                            response.Success = true;
-                            response.Message = "PEDIDO YA INGRESADO NÚMERO " + pedido?.Ccomprobai?.CCO_NUMERO;
-                            return response;
-                        }
-                    }
                 }
                 else
                 {
@@ -1213,5 +1240,270 @@ public class PedidoService : IPedidoService
             return response;
 
         }
+    }
+
+
+
+    public async Task<ServiceResponse<object>> GetPedidosNavidadAsync(decimal agente) //// SOLO MUESTRA LAS CABECERAS
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+            var yearNow = DateTime.Now.AddYears(-1).Year;
+            var query = await (from t in _context.TDS_PEDIDOS_NAV_CAB
+                                    join cl in _context.CLIENTE on t.CLI_CODIGO equals cl.CLI_CODIGO
+                                    where cl.CLI_AGENTE == agente
+                                    && t.FECHA.Year >= yearNow
+                                    select new
+                                    {
+                                        t.ID_PEDIDO_NAV,
+                                        cl.CLI_NOMBRE,
+                                        t.FECHA,
+                                        //PED_INFO = cl.CLI_NOMBRE + " " +  t.FECHA + " " + t.ID_PEDIDO_NAV
+                                    }).ToListAsync();
+
+            var resultados = query.Select(r => new
+            {
+                r.ID_PEDIDO_NAV,
+                r.CLI_NOMBRE,
+                FECHA = r.FECHA.ToString("yyyy/MM/dd"), 
+                PED_INFO = r.CLI_NOMBRE + " " + r.FECHA.ToString("yyyy-MM-dd") + " " + r.ID_PEDIDO_NAV
+            }).ToList();
+            if (resultados == null || !resultados.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA PEDIDOS NAV.";
+                return response;
+            }
+
+            response.Data = resultados;
+            response.Success = true;
+            response.Message = "PEDIDOS NAV ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetPedidosNavidadAsync() " + ex.ToString() + agente);
+        }
+        return response;
+    }
+
+
+
+    public async Task<ServiceResponse<object>> GetPedidoNavidadDAsync(AuxGeneral auxGeneral) /// muestra los detalles
+    {
+        var response = new ServiceResponse<object>();
+        try
+        {
+
+            var cabecera = await (from t in _context.TDS_PEDIDOS_NAV_CAB
+                                  join cl in _context.CLIENTE on t.CLI_CODIGO equals cl.CLI_CODIGO
+                                  where t.ID_PEDIDO_NAV == auxGeneral.AuxInt
+
+                                 
+                                  select new PedidoNavCab
+                                  {
+                                      FECHA = t.FECHA,
+                                      CLI_CODIGO = t.CLI_CODIGO,
+                                      ID_PEDIDO_NAV = t.ID_PEDIDO_NAV,
+                                      OBSERVACIONES = t.OBSERVACIONES,
+                                      TELEFONO = t.TELEFONO,
+                                      CLI_NOMBRE = cl.CLI_NOMBRE 
+
+                                  }).ToListAsync();
+
+
+
+            var detalle = await (from t in _context.TDS_PEDIDO_NAV_DET
+                                 join p in _context.PRODUCTO on t.PRO_CODIGO equals p.PRO_CODIGO
+                                 where t.ID_PEDIDO_FK == auxGeneral.AuxInt
+                                 select new PedidoNavDetalle
+                                 {
+                                     CANTIDAD = t.CANTIDAD,
+                                     ID_EMPRESA = t.ID_EMPRESA,
+                                     ID_PEDIDO_DET = t.ID_PEDIDO_DET,
+                                     ID_PEDIDO_FK = t.ID_PEDIDO_FK,
+                                     PRO_CODIGO = t.PRO_CODIGO,
+                                     PRECIO = t.PRECIO,
+                                     UMD_CODIGO = t.UMD_CODIGO,
+                                     PRO_NOMBRE = p.PRO_NOMBRE 
+
+
+                                 })
+                                 .OrderBy(o=> o.ID_PEDIDO_DET)
+                                 .ToListAsync();
+
+            var resultados = new AuxNuevoPedidoNav
+            {
+                PedidoNavCab = cabecera.FirstOrDefault(),
+                PedidoNavDetalle = detalle
+            };
+
+
+            if (resultados == null || !resultados.PedidoNavDetalle.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA PEDIDOS NAV.";
+                return response;
+            }
+
+            response.Data = resultados;
+            response.Success = true;
+            response.Message = "PEDIDOS NAV ENCONTRADOS EXISTOSAMENTE";
+
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetPedidosNavidadDAsync() " + ex.ToString());
+
+        }
+        return response;
+    }
+
+
+
+    public async Task<ServiceResponse<object>> CreatePedidoNavAsync(AuxNuevoPedidoNav auxNuevoPedidoNav)
+    {
+        var response = new ServiceResponse<object>();
+
+        int id_PEDIDO_NAV = 0;
+        int ID_PEDIDO_DET = 0;
+
+        List<TDS_PEDIDO_NAV_DET> listadpedidoN = new List<TDS_PEDIDO_NAV_DET>();
+
+        decimal agente = 0;    
+
+
+        try
+        {
+            if ( auxNuevoPedidoNav.TDS_PEDIDO_NAV_DET == null || !auxNuevoPedidoNav.TDS_PEDIDO_NAV_DET.Any() || auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB == null)
+            {
+                response.Data = null;
+                response.Success = false;
+                response.Message = "ERROR, LOS DATOS NO ESTAN COMPLETOS";
+                return response;
+            }
+
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = "SELECT DATA_USR.TDS_PEDIDO_NAV_CAB_SEQ.nextval FROM dual";
+                    await _context.Database.OpenConnectionAsync();
+
+                    var result = await command.ExecuteScalarAsync();
+                    id_PEDIDO_NAV = Convert.ToInt32(result);
+                }
+
+                var cabecera = new TDS_PEDIDOS_NAV_CAB
+                {
+                    ID_PEDIDO_NAV = id_PEDIDO_NAV,
+                    CLI_CODIGO = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.CLI_CODIGO ?? 0,
+                    FECHA = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.FECHA ?? DateTime.Now,
+
+                    TELEFONO = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.TELEFONO ?? string.Empty,
+                    OBSERVACIONES = auxNuevoPedidoNav.TDS_PEDIDOS_NAV_CAB?.OBSERVACIONES ?? string.Empty,
+                   
+
+                };
+                await _context.TDS_PEDIDOS_NAV_CAB.AddAsync(cabecera);
+                int cabsave = await _context.SaveChangesAsync();
+
+                if (cabsave != 0)
+                {
+                    foreach (var auxint in auxNuevoPedidoNav.TDS_PEDIDO_NAV_DET)
+                    {
+
+                        using (var command = _context.Database.GetDbConnection().CreateCommand())
+                        {
+                            command.CommandText = "SELECT DATA_USR.TDS_PEDIDO_NAV_DET_SEQ.nextval FROM dual";
+                            await _context.Database.OpenConnectionAsync();
+
+                            var result = await command.ExecuteScalarAsync();
+                            ID_PEDIDO_DET = Convert.ToInt32(result);
+                        }
+                        var tDS_PEDIDO_NAV_DET = new TDS_PEDIDO_NAV_DET
+                        {
+                            ID_PEDIDO_DET = ID_PEDIDO_DET,
+                            ID_EMPRESA = auxint.ID_EMPRESA,
+                            ID_PEDIDO_FK = id_PEDIDO_NAV,
+                            PRO_CODIGO = auxint.PRO_CODIGO,
+                            CANTIDAD = auxint.CANTIDAD,
+
+                            PRECIO = auxint.PRECIO,
+                            UMD_CODIGO = auxint.UMD_CODIGO,
+                        };
+                        listadpedidoN.Add(tDS_PEDIDO_NAV_DET);
+                    }
+                    await _context.TDS_PEDIDO_NAV_DET.AddRangeAsync(listadpedidoN);
+                    int detsave = await _context.SaveChangesAsync();
+                    if (detsave != 0)
+                    {
+                       
+                       agente = await _agenteService.GetCodigoAgentexClientesync(cabecera.CLI_CODIGO);
+                        string usr = await _agenteService.GetUsuarioAsync(agente);
+                        if (agente != null)
+                        {
+                            cabecera.CREA_USR = usr;
+                            cabecera.MOD_USR = usr;
+                    
+                            _context.TDS_PEDIDOS_NAV_CAB.Update(cabecera);
+                            await _context.SaveChangesAsync();
+
+                        }
+                        await transaction.CommitAsync();
+                    }
+                    else
+                    {
+                        transaction.Rollback();
+                        response.Data = null;
+                        response.Success = false;
+                        response.Message = "Existió un problema por favor vuelva a intentarlo.";
+                        return response;
+
+                    }
+                    var aux = new AuxGeneral
+                    {
+                        AuxDecimal = id_PEDIDO_NAV
+                    };
+                    var mensajeria = await _mensajeriaService.CreateMensajeNavAsync(aux);
+
+                    //var AuxNuevoPedidoNav = await GetPedidoNavidadDAsync(aux);
+
+                    response.Data = auxNuevoPedidoNav;
+                    response.Success = true;
+                    response.Message = "Pedido guardado Existosamente # de pedido = " + id_PEDIDO_NAV +  mensajeria.Message;
+                    return response;
+                }
+                else
+                {
+                    transaction.Rollback();
+                    response.Data = null;
+                    response.Success = false;
+                    response.Message = "Existió un problema por favor vuelva a intentarlo.";
+                    return response;
+                }
+            }
+
+        
+        }
+        catch (Exception ex)
+        {
+
+            response.Data = auxNuevoPedidoNav;
+            response.Success = false;
+            response.Message = "Existió un problema por favor vuelva a intentarlo." + ex.ToString();
+            _logger.LogError(" --------------------- ERROR ------------------ CreatePedidoNavAsync " + ex.ToString());
+            return response;
+        }
+
     }
 }

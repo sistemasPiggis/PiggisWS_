@@ -20,7 +20,7 @@ public class DDocumento
     public decimal DDO_RECARGOS_EXT { get; set; }
     public decimal? DDO_CANCELA { get; set; }
 
-    public decimal DDO_CANCELA_EXT { get; set; }
+    public decimal? DDO_CANCELA_EXT { get; set; } /// bug de cuando un doc tiene cancelacion en null desde la BD
     public int DDO_CANCELADO { get; set; }
     public decimal DDO_AGENTE { get; set; }
 
