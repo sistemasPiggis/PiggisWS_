@@ -235,4 +235,23 @@ public class DevolucionController : ControllerBase
 
         return BadRequest(response.Message);
     }
+
+
+
+
+    [Authorize]
+    [HttpPost("GetTopIdvsNoGestxClienteAsync")]
+
+    public async Task<IActionResult> GetTopIdvsNoGestxClienteAsync([FromBody] decimal agente)
+    {
+        var response = await _devolucionesService.GetTopIdvsNoGestxClienteAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
 }

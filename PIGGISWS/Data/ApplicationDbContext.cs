@@ -103,6 +103,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Devolucion_Ext> DEVOLUCION_EXT { get; set; }
     public DbSet<Cc_Est_Perididos> CC_EST_PEDIDOS { get; set; }
     public DbSet<Vl_Cc_Est_Pedidosq> VL_CC_EST_PEDIDOSQ { get; set; }
+    public DbSet<Idv_No_Gestionados> IDV_NO_GESTIONADOS { get; set; }
     public DbSet<Rep_Lista_Prod_Ped_Internet> REP_LISTA_PROD_PED_INTERNET { get; set; }
     public DbSet<SaldoCarteraResult> SaldoCarteraResults { get; set; }
     public DbSet<FechaSugResult> FechaSugResults { get; set; }
@@ -110,7 +111,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rep_Cons_Cartera_Interneta> REP_CONS_CARTERA_INTERNETA { get; set; }
     public DbSet<REP_CANTIDADES_VENTAS_2009> REP_CANTIDADES_VENTAS_2009 { get; set; }
     public DbSet<REP_PEDIDOS_INT_X_DAPP> REP_PEDIDOS_INT_X_DAPP { get; set; }
-    public DbSet<Tmp_Dev_Pro_Cli_Age> TMP_DEV_PROD_CLI_AGE { get; set; }
+    public DbSet<TMP_DEV_PROD_CLI_AGE> TMP_DEV_PROD_CLI_AGE { get; set; }
     public DbSet<REP_DET_ESTADO_DESPACHO_PED> REP_DET_ESTADO_DESPACHO_PED { get; set; }
     public DbSet<REP_CART_VEN_INT_T> REP_CART_VEN_INT_T { get; set; }
 
@@ -137,7 +138,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<TDS_PEDIDOS_NAV_CAB>()
            .HasKey(a => new { a.ID_PEDIDO_NAV });
 
-        modelBuilder.Entity<Tmp_Dev_Pro_Cli_Age>()
+        modelBuilder.Entity<TMP_DEV_PROD_CLI_AGE>()
            .HasKey(a => new { a.CODIGO_PK });
         modelBuilder.Entity<Clientes_Nuevos>()
             .HasKey(cn => new { cn.ID_SECUENCIA_PK });
@@ -193,11 +194,12 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<REP_PEDIDOS_INT_X_DAPP>().ToTable("REP_PEDIDOS_INT_X_DAPP").HasKey(a => new { a.DOC, a.CCO_AGENTE, a.CANTIDAD_KILOS });
         modelBuilder.Entity<REP_DET_ESTADO_DESPACHO_PED>().ToTable("REP_DET_ESTADO_DESPACHO_PED").HasKey(a => new { a.FAC, a.ESTADO_DESPACHO, a.CLI_NOMBRE });
         modelBuilder.Entity<REP_CART_VEN_INT_T>().ToTable("REP_CART_VEN_INT_T").HasKey(a => new { a.DOC, a.AGE_CODIGO, a.CLI_CLAVE });
+        modelBuilder.Entity<Idv_No_Gestionados>().ToTable("IDV_NO_GESTIONADOS").HasKey(a => new { a.IDV, a.CLI_CODIGO, a.PRO_CODIGO });
         #endregion
 
-       
 
-    modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
+
+        modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
                 .GetMethod(nameof(F_CXC_SALDO_CARTERA_PED_ST_NR), new[] { typeof(int), typeof(decimal) }))
                 .HasName("F_CXC_SALDO_CARTERA_PED_ST_NR");
 

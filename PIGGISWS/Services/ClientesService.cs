@@ -1237,6 +1237,92 @@ public class ClientesService : IClientesService
 
         return response;
     }
+
+
+
+    public async Task<List<decimal>> GetCodsClientesDiaxAgente(decimal agente)
+    {
+        System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
+
+        // Crea un objeto CultureInfo en español
+        CultureInfo ci = new CultureInfo("es-ES");
+
+        // Obtiene el nombre del día de la semana en español
+        string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+        //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
+        var diasPermitidos = new[] { "DOMINGO" };
+        string dayformateado = dayName.ToUpper();
+        dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
+        var response = new List<decimal>();
+
+
+
+        try
+        {
+
+            var query = await (from cl in _context.CLIENTE
+                        //join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                        //join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                        // LEFT JOIN con CLIENTE_DIA para evitar duplicados
+                        join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
+                        from cd in cd_group.DefaultIfEmpty()
+                        
+                        where cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_TIPO == p_cli_Tipo
+                              && cl.CLI_INACTIVO == p_cli_Inactivo
+
+                              //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
+                              && cl.CLI_AGENTE == agente
+                              && (
+                                  diasPermitidos.Contains(dayformateado)
+                                  || cd.CDI_DIA == dayformateado
+                              )
+
+                            //&& (preciosPermitidosNav.Count == 0 || !preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
+                        // Agrupamos por cliente para obtener resultados únicos
+                        group new { cl,  cd } by new
+                        {
+                            cl.CLI_CODIGO,
+                           
+                        } into g
+                        select new 
+                        {
+                           
+                      
+                            CLI_CODIGO = g.Key.CLI_CODIGO,
+                            
+                        }).Select(x => x.CLI_CODIGO) 
+
+                .ToListAsync();
+
+
+
+
+            if (query == null || !query.Any())
+            {
+                response = null;
+
+            }
+            else
+            {
+                
+                response = query;
+                
+            }
+        }
+        catch (NotFoundException ex)
+        {
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+        catch (Exception ex)
+        {
+           
+            
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
+    }
 }
 
 

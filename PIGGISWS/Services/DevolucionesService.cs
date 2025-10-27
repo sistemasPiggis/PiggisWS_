@@ -21,6 +21,7 @@ public class DevolucionesService : IDevolucionesService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DevolucionesService> _logger;
     private readonly ICarteraService _carteraService;
+    private readonly IClientesService _clientesService;
     ServiceResponse<object> respuesta = new ServiceResponse<object>();
 
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
@@ -28,13 +29,15 @@ public class DevolucionesService : IDevolucionesService
     int p_car_siglafac;
     decimal CRT_NUMERO;
     string p_estado_dev ="";
+    int P_DIAS_IDVNOGEST;
 
-    public DevolucionesService(ApplicationDbContext context, ILogger<DevolucionesService> logger, ICarteraService carteraService)
+    public DevolucionesService(ApplicationDbContext context, ILogger<DevolucionesService> logger, ICarteraService carteraService, IClientesService clientesService)
     {
         _context = context;
         _logger = logger;
         GetParametros();
         _carteraService = carteraService;
+        _clientesService = clientesService;
     }
 
     public void GetParametros()
@@ -45,6 +48,7 @@ public class DevolucionesService : IDevolucionesService
             p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
             p_car_siglafac = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 55)?.VALOR ?? "0");
             p_estado_dev = parametros.FirstOrDefault(p => p.CODIGO == 56)?.VALOR ?? "G";
+            P_DIAS_IDVNOGEST = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 69)?.VALOR ?? "0");
         }
         catch (Exception ex)
         {
@@ -329,7 +333,7 @@ public class DevolucionesService : IDevolucionesService
                     };
                     respuesta.Data =  respauxdev ;
                     respuesta.Success = true;
-                    respuesta.Message = "Pedido guardado exitosamente # de DEVOLUCION = " + respauxdev.Cabecera.DEV_NUMERO;
+                    respuesta.Message = "Devolución guardado exitosamente # de DEVOLUCION = " + respauxdev.Cabecera.DEV_NUMERO;
 
                     using (var command = _context.Database.GetDbConnection().CreateCommand())
                     {
@@ -826,5 +830,75 @@ public class DevolucionesService : IDevolucionesService
 
 
     }
+
+
+
+
+    public async Task<ServiceResponse<object>> GetTopIdvsNoGestxClienteAsync(decimal agente)
+
+    {
+        var date = DateTime.Now.AddDays(-P_DIAS_IDVNOGEST); /// inicialmente -60 dias
+        var response = new ServiceResponse<object>();
+        var clientesDelAgente = await _clientesService.GetCodsClientesDiaxAgente(agente);
+        try
+        {
+
+            var idvs = await (from ca in _context.DEVOLUCION_CAB
+                              where ca.DEV_DOC_REFERENCIA == null && ca.DEV_FECHA >= date && clientesDelAgente.Contains(ca.DEV_CLIENTE ?? 0)
+                              select new
+                              {
+                                  DEV_NUMERO = ca.DEV_NUMERO ?? 0,
+                                  DEV_CLIENTE = ca.DEV_CLIENTE ?? 0
+                              }).ToListAsync();
+            var idvs2 = await (from ca in _context.TMP_DEV_PROD_CLI_AGE
+                              where ca.NUMERO_IDC == null && ca.ID_DEVOLUCION_NR !=null  && ca.FECHA_DT >= date && clientesDelAgente.Contains(ca.CLIENTE_FK)
+                               select new
+                              {
+                                  DEV_NUMERO = ca.ID_DEVOLUCION_NR , 
+                                  DEV_CLIENTE = ca.CLIENTE_FK 
+                              }).ToListAsync();
+
+
+            var todasLasDevoluciones = idvs.Concat(idvs2);
+
+            
+            var resultados = todasLasDevoluciones
+
+                .GroupBy(ca => ca.DEV_CLIENTE)
+                .SelectMany(g => g.OrderByDescending(d => d.DEV_NUMERO) 
+                                   .Take(5))
+
+                .Select(d => new
+                {
+                    d.DEV_NUMERO,
+                    d.DEV_CLIENTE
+                })
+                .ToList();
+
+
+            if (resultados == null || !resultados.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA DATOS";
+                return response;
+            }
+
+            response.Data = resultados;
+            response.Success = true;
+            response.Message = "DATOS ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetTopIdvsNoGestxClienteAsync() " + ex.ToString());
+        }
+        return response;
+
+
+    }
+
 
 }
