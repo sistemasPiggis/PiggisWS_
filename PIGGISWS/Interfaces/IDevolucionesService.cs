@@ -21,4 +21,6 @@ public interface IDevolucionesService
     Task<ServiceResponse<object>> GetDevProDenCodigoAsync(AuxGeneral dev);
 
     Task<ServiceResponse<object>> GetTopIdvsNoGestxClienteAsync(decimal agente);
+
+    Task<ServiceResponse<object>> GetDevsNoGxAgeAsync(decimal agente);
 }

@@ -439,7 +439,7 @@ public class PedidoService : IPedidoService
         decimal cco_codigo = 0;
 
         int e = p_empresa;
-
+        int productosEsperados = auxNuevoPedidos.DFacturai?.Count ?? 0;
 
         try
         {
@@ -534,6 +534,7 @@ public class PedidoService : IPedidoService
                     };
                     await _context.CCOMFACI.AddAsync(ccomfaci);
                     int ccomfacisave = await _context.SaveChangesAsync();
+               
                     if (ccomfacisave != 0)
                     {
                         foreach (var auxint in auxNuevoPedidos.DFacturai)
@@ -581,6 +582,18 @@ public class PedidoService : IPedidoService
                         }
                         await _context.DFACTURAI.AddRangeAsync(listadfactura);
                         int dfacturaisave = await _context.SaveChangesAsync();
+
+
+                        if (dfacturaisave != productosEsperados)
+                        {
+                            // ¡ERROR! Si solo se guardaron 4 (productosGuardados=4), hacemos ROLLBACK de todo.
+                            transaction.Rollback();
+                            response.Data = null;
+                            response.Success = false;
+                            response.Message = $"Error de consistencia: Se esperaban {productosEsperados} líneas de detalle, pero solo se guardaron {dfacturaisave}. Se abortó la transacción.";
+                            return response;
+                            
+                        }
                         if (dfacturaisave != 0)
                         {
                             var totali = new Totali
@@ -612,6 +625,7 @@ public class PedidoService : IPedidoService
                             await _context.TOTALI.AddAsync(totali);
                             int totalisave = await _context.SaveChangesAsync();
                             if (totalisave != 0)
+                            {
                                 await _ruteroService.SetRuteroPedidoAsync(ccomprobai.CCO_CODCLIPRO, ccomprobai.CCO_AGENTE ?? 0, ccomprobai.CCO_FECHA, _cliente.CLI_ZONA ?? 0); /// registra en el rutero visita y pedido
                             string agente = await _agenteService.GetUsuarioAsync(ccomprobai.CCO_AGENTE ?? 0);
                             if (agente != null)
@@ -622,6 +636,15 @@ public class PedidoService : IPedidoService
 
                             }
                             await transaction.CommitAsync();
+                            }
+                            else
+                            {
+                                transaction.Rollback();
+                                response.Data = null;
+                                response.Success = false;
+                                response.Message = "Existió un problema por favor vuelva a intentarlo.";
+                                return response;
+                            }
                         }
                         else
                         {
@@ -657,7 +680,22 @@ public class PedidoService : IPedidoService
         }
         catch (Exception ex)
         {
+            if (_context.Database.CurrentTransaction != null)
+            {
+                try
+                {
+                    _context.Database.CurrentTransaction.Rollback();
+                    // Opcional: registrar que se hizo el rollback.
+                    // _logger.LogWarning("Transacción abortada: Rollback ejecutado en el catch.");
+                }
+                catch (Exception rollbackEx)
+                {
+                    // Registrar si el Rollback también falla
+                    _logger.LogError($"ERROR: El Rollback de la transacción falló. Detalle: {rollbackEx.Message}");
+                }
+            }
 
+            // 2. Manejo de la respuesta y logging (Se mantiene tu lógica)
             response.Data = auxNuevoPedidos;
             response.Success = false;
             response.Message = "Existió un problema por favor vuelva a intentarlo." + ex.ToString();

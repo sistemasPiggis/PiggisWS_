@@ -254,4 +254,25 @@ public class DevolucionController : ControllerBase
 
         return BadRequest(response.Message);
     }
+
+
+
+    [Authorize]
+    [HttpPost("GetDevsNoGxAgeAsync")]
+
+    public async Task<IActionResult> GetDevsNoGxAgeAsync([FromBody] decimal agente)
+    {
+        var response = await _devolucionesService.GetDevsNoGxAgeAsync(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+
 }

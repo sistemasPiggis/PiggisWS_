@@ -789,23 +789,39 @@ public class DevolucionesService : IDevolucionesService
         {
 
             var resultados = await (
-                 from c in _context.CCOMPROBA
-                 join d in _context.DMOVINVI on c.CCO_CODIGO equals d.DMO_CMO_COMPROBA
-                 join p in _context.PRODUCTO on d.DMO_PRODUCTO equals p.PRO_CODIGO
-                 join u in _context.UMEDIDA on d.DMO_UDIGITADA equals u.UMD_CODIGO
-                 join t in _context.TIPODEV on d.DMO_TIPODEV equals t.TDE_CODIGO
-                 where c.CCO_CODIGO == dev.AuxDecimal
-                 orderby d.DMO_SECUENCIA ascending
-                 select new
-                 {
-                     PRO_ID = p.PRO_ID,
-                     PRO_NOMBRE = p.PRO_NOMBRE,
-                     UMD_ID = u.UMD_ID,
-                     DMO_CDIGITADA = d.DMO_CDIGITADA,
-                     TDE_NOMBRE = t.TDE_NOMBRE
-                 }
-             ).ToListAsync();
+       from c in _context.CCOMPROBA
+       join d in _context.DMOVINVI on c.CCO_CODIGO equals d.DMO_CMO_COMPROBA
+       join p in _context.PRODUCTO on d.DMO_PRODUCTO equals p.PRO_CODIGO
+       join u in _context.UMEDIDA on d.DMO_UDIGITADA equals u.UMD_CODIGO
+       join t in _context.TIPODEV on d.DMO_TIPODEV equals t.TDE_CODIGO
+       join dc in _context.DEVOLUCION_CAB on c.CCO_CODIGO equals dc.DEV_DOC_REFERENCIA
 
+
+       join dd in _context.DEVOLUCION_DET on new
+       {
+          
+           DevCodigo = (decimal)dc.DEV_CODIGO,
+           ProductCode = (decimal)d.DMO_PRODUCTO
+       }
+       equals new
+       {
+           
+           DevCodigo = (decimal)dd.DVD_CODIGO,
+           ProductCode = (decimal?)dd.DVD_PRODUCTO ??0 
+       }
+
+       where c.CCO_CODIGO == dev.AuxDecimal
+       orderby d.DMO_SECUENCIA ascending
+       select new
+       {
+           PRO_ID = p.PRO_ID,
+           PRO_NOMBRE = p.PRO_NOMBRE,
+           UMD_ID = u.UMD_ID,
+           DMO_CDIGITADA = d.DMO_CDIGITADA,
+           TDE_NOMBRE = t.TDE_NOMBRE,
+           DVD_OBSERVACION_CALIDAD2 = dd.DVD_OBSERVACION_CALIDAD2
+       }
+   ).ToListAsync();
 
             if (resultados == null)
             {
@@ -900,5 +916,82 @@ public class DevolucionesService : IDevolucionesService
 
     }
 
+
+
+    public async Task<ServiceResponse<object>> GetDevsNoGxAgeAsync(decimal agente)
+    {
+
+        var response = new ServiceResponse<object>();
+        try
+        {
+
+            int currentYear = DateTime.Now.Year;
+            var query1 = from d in _context.TMP_DEV_PROD_CLI_AGE
+                         join c in _context.CLIENTE on d.CLIENTE_FK equals c.CLI_CODIGO
+                         where d.AGENTE_FK == agente && d.ID_DEVOLUCION_NR != 0
+                         && d.FECHA_DT.HasValue
+                            && d.FECHA_DT.Value.Year == currentYear
+                     
+                         group d by new { d.ID_DEVOLUCION_NR, d.FECHA_DT, d.NUMERO_IDC, c.CLI_NOMBRE } into g
+                         select new
+                         {
+                             CODIGO = g.Key.ID_DEVOLUCION_NR,
+                             NUMERO = g.Key.NUMERO_IDC,
+                             FECHA = (DateTime?)g.Key.FECHA_DT,
+                             SOURCE = "A",
+                             CLIENTE = g.Key.CLI_NOMBRE
+                         };
+
+            var query2 = from c in _context.DEVOLUCION_CAB
+                         join cl in _context.CLIENTE on c.DEV_CLIENTE equals cl.CLI_CODIGO
+                         where c.DEV_AGENTE == agente
+                         && c.DEV_FECHA.HasValue
+                          && c.DEV_FECHA.Value.Year == currentYear
+                          && c.DEV_DOC_REFERENCIA == null
+                         select new
+                         {
+                             CODIGO = c.DEV_CODIGO,
+                             NUMERO = c.DEV_NUMERO,
+                             FECHA = c.DEV_FECHA,
+                             SOURCE = "N",
+                             CLIENTE = cl.CLI_NOMBRE
+                         };
+
+            var unionQuery = query1.Union(query2);
+
+            var data = await unionQuery.ToListAsync();
+
+            var resultados = data
+                .Select(x => new
+                {
+                    ZON_NOMBRE = x.CLIENTE + " " + (x.FECHA.HasValue ? x.FECHA.Value.ToString("yyyy-MM-dd") : "") + " - " + x.NUMERO.ToString() + " - ",
+                    CRT_DOCTRAN = x.CODIGO.ToString() + x.SOURCE
+                })
+                //.OrderByDescending(x => DateTime.TryParse(x.ZON_NOMBRE.Split(" - ")[0], out var fecha) ? fecha : DateTime.MinValue)
+                //.ThenByDescending(x => x.ZON_NOMBRE)
+                .ToList();
+
+
+
+            if (resultados == null || !resultados.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "NO SE ENCUENTRA DATOS";
+            }
+
+            response.Data = resultados;
+            response.Success = true;
+            response.Message = "DATOS ENCONTRADOS EXISTOSAMENTE";
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = ex.ToString();
+            response.Data = null;
+            _logger.LogError(" --------------------- ERROR ------------------ GetDevsxAgeAsync() " + ex.ToString() + agente);
+        }
+        return response;
+    }
 
 }

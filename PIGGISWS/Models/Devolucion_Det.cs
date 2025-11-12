@@ -17,4 +17,5 @@ public class Devolucion_Det
     public string DVD_CARGADO_DESDE { get; set; } = "V"; // V= AGENTE, A = ADMINISTRACION
 
     public string DVD_ESTADO { get; set; } = "G"; // A= ACTIVO, I = INACTIVO
+    public string? DVD_OBSERVACION_CALIDAD2 { get; set; } = string.Empty;
 }

@@ -21,6 +21,7 @@ public class ClientesService : IClientesService
     private readonly ApplicationDbContext _context;
     private readonly IEmailService _emailService;
     private readonly IAgenteService _agenteService;
+    private readonly ILogger<DevolucionesService> _logger;
     // GET: Clienteprivate readonly ApplicationDbContext _context;
     ModelResponse model = new ModelResponse();
     Cliente cliente = new Cliente();
@@ -38,13 +39,14 @@ public class ClientesService : IClientesService
     string P_CLI_NOT_MAILS;
     string P_LISTA_PNAV = "";
     int P_NAVIDAD = 0;
-    public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService)
+    public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService, ILogger<DevolucionesService> logger)
     {
         _context = context;
         P_CLI_NOT_MAILS = string.Empty;
         _emailService = emailService;
         GetParametros();
         _agenteService = agenteService;
+        _logger = logger;
     }
 
     public void GetParametros()
@@ -77,23 +79,17 @@ public class ClientesService : IClientesService
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
 
-
-
-
-        var preciosPermitidosNav = new HashSet<decimal>();
-        if (!string.IsNullOrEmpty(P_LISTA_PNAV))
-        {
-            preciosPermitidosNav = P_LISTA_PNAV.Split(';')
-                                               .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
-                                               .Where(d => d.HasValue)
-                                               .Select(d => d.Value)
-                                               .ToHashSet();
-        }
-
-
-
         try
         {
+            var preciosPermitidosNav = new HashSet<decimal>();
+            if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+            {
+                preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+            }
 
             var query = from cl in _context.CLIENTE
                         join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
@@ -191,12 +187,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesxAgente() " + ex.ToString());
         }
         catch (Exception ex)
         {
             // Log the exception details (ex) here as needed
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesxAgente() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -334,6 +332,7 @@ public class ClientesService : IClientesService
             }
             catch (Exception ex)
             {
+                _logger.LogError(" --------------------- ERROR ------------------ CreateClienteAsync() " + ex.ToString());
                 response.Message += "NO SE PUDO CREAR EL CLIENTE " + ex.Message;
                 response.Data = null;
                 response.Success = true;
@@ -427,12 +426,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCodigo() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCodigo() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -561,38 +562,55 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ EditClienteAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes. " + ex;
-
+            _logger.LogError(" --------------------- ERROR ------------------ EditClienteAsync() " + ex.ToString());
         }
 
         return response;
     }
     public async Task<decimal> ObtenerDeudaAsync(int empresa, decimal clienteCodigo)
     {
-        var result = await _context.SaldoCarteraResults
-             .FromSqlRaw("SELECT F_CXC_SALDO_CARTERA_PED_ST_NR(:empresa, :clienteCodigo) AS DEUDA FROM DUAL",
-                         new OracleParameter("empresa", empresa),
-                         new OracleParameter("clienteCodigo", clienteCodigo))
-             .ToListAsync();
+        try
+        {
+            var result = await _context.SaldoCarteraResults
+                 .FromSqlRaw("SELECT F_CXC_SALDO_CARTERA_PED_ST_NR(:empresa, :clienteCodigo) AS DEUDA FROM DUAL",
+                             new OracleParameter("empresa", empresa),
+                             new OracleParameter("clienteCodigo", clienteCodigo))
+                 .ToListAsync();
 
-        return result.FirstOrDefault()?.DEUDA ?? 0;
+            return result.FirstOrDefault()?.DEUDA ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ ObtenerDeudaAsync() " + ex.ToString());
+            return 0;
+        }
     }
 
     public async Task<DateTime> ObtenerFechaSugeridaAsync(int empresa, decimal clienteCodigo, decimal agente)
     {
-        var result = await _context.FechaSugResults
-             .FromSqlRaw("SELECT F_VNT_FECHA_FACTURAR_DT(:empresa, :clienteCodigo, :cliAgente) AS FECHA_SUG FROM DUAL",
-                         new OracleParameter("empresa", empresa),
-                         new OracleParameter("clienteCodigo", clienteCodigo),
-                         new OracleParameter("cliAgente", agente))
-             .ToListAsync();
+        try
+        {
+            var result = await _context.FechaSugResults
+                 .FromSqlRaw("SELECT F_VNT_FECHA_FACTURAR_DT(:empresa, :clienteCodigo, :cliAgente) AS FECHA_SUG FROM DUAL",
+                             new OracleParameter("empresa", empresa),
+                             new OracleParameter("clienteCodigo", clienteCodigo),
+                             new OracleParameter("cliAgente", agente))
+                 .ToListAsync();
 
-        return result.FirstOrDefault()?.FECHA_SUG ?? DateTime.Now;
+            return result.FirstOrDefault()?.FECHA_SUG ?? DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ ObtenerFechaSugeridaAsync() " + ex.ToString());
+            return DateTime.Now;
+        }
     }
 
 
@@ -644,7 +662,7 @@ public class ClientesService : IClientesService
         }
         catch (Exception ex)
         {
-
+            _logger.LogError(" --------------------- ERROR ------------------ UpdateRuteroxClienteAsync() " + ex.ToString());
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes. " + ex;
             response.Data = null;
@@ -727,12 +745,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCedRucAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCedRucAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -792,12 +812,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClientexCedRucAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClientexCedRucAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -861,12 +883,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClienteNuevoxCedRucAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClienteNuevoxCedRucAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -910,12 +934,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesDespachosAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesDespachosAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -964,12 +990,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetPedidosDesxClienteAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetPedidosDesxClienteAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -1036,12 +1064,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNuevos() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNuevos() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -1098,6 +1128,7 @@ public class ClientesService : IClientesService
             response.Message = "Ocurrió un error al obtener los cliente." + ex.ToString(); ;
             response.Data = null;
             response.Status = 0;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClienteBloqueoAsync() " + ex.ToString());
             return response;
         }
 
@@ -1109,34 +1140,28 @@ public class ClientesService : IClientesService
     public async Task<ServiceResponse<object>> GetClientesNavidadxAgente(decimal agente)
     {
         GetParametros();
-        if (P_NAVIDAD == 0)
-        {             
-            var responseNoNav = new ServiceResponse<object>();
-            responseNoNav.Data = null;
-            responseNoNav.Success = true;
-            responseNoNav.Message = "No está activada la opción de Navidad.";
-            return responseNoNav;
-        }
-
         var response = new ServiceResponse<object>();
 
-
-
-
         var preciosPermitidosNav = new HashSet<decimal>();
-        if (!string.IsNullOrEmpty(P_LISTA_PNAV))
-        {
-            preciosPermitidosNav = P_LISTA_PNAV.Split(';')
-                                               .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
-                                               .Where(d => d.HasValue)
-                                               .Select(d => d.Value)
-                                               .ToHashSet();
-        }
-
-
-
+       
         try
         {
+            if (P_NAVIDAD == 0)
+            {
+                var responseNoNav = new ServiceResponse<object>();
+                responseNoNav.Data = null;
+                responseNoNav.Success = true;
+                responseNoNav.Message = "No está activada la opción de Navidad.";
+                return responseNoNav;
+            }
+            if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+            {
+                preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+            }
 
             var query = from cl in _context.CLIENTE
                         join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
@@ -1226,12 +1251,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNavidadxAgente() " + ex.ToString());
         }
         catch (Exception ex)
         {
             // Log the exception details (ex) here as needed
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNavidadxAgente() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -1254,12 +1281,8 @@ public class ClientesService : IClientesService
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new List<decimal>();
-
-
-
         try
         {
-
             var query = await (from cl in _context.CLIENTE
                         //join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
                         //join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
@@ -1300,7 +1323,7 @@ public class ClientesService : IClientesService
 
             if (query == null || !query.Any())
             {
-                response = null;
+                response = new List<decimal>();
 
             }
             else
@@ -1312,15 +1335,15 @@ public class ClientesService : IClientesService
         }
         catch (NotFoundException ex)
         {
+            _logger.LogError(" --------------------- ERROR ------------------ GetCodsClientesDiaxAgente() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
         catch (Exception ex)
         {
-           
-            
+
+            _logger.LogError(" --------------------- ERROR ------------------ GetCodsClientesDiaxAgente() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
-
         return response;
     }
 }

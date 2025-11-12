@@ -1302,7 +1302,24 @@ public class CarteraService : ICarteraService
                                  join pr in _context.PRODUCTO on dm.DMO_PRODUCTO equals pr.PRO_CODIGO
                                  join um in _context.UMEDIDA on dm.DMO_UDIGITADA equals um.UMD_CODIGO
                                  join td in _context.TIPODEV on dm.DMO_TIPODEV equals td.TDE_CODIGO
+                                 join dc in _context.DEVOLUCION_CAB on cc.CCO_CODIGO equals dc.DEV_DOC_REFERENCIA
+
+
+                                 join dd in _context.DEVOLUCION_DET on new
+                                 {
+
+                                     DevCodigo = (decimal)dc.DEV_CODIGO,
+                                     ProductCode = (decimal)dm.DMO_PRODUCTO
+                                 }
+                                 equals new
+                                 {
+
+                                     DevCodigo = (decimal)dd.DVD_CODIGO,
+                                     ProductCode = (decimal?)dd.DVD_PRODUCTO ?? 0
+                                 }
+
                                  where cc.CCO_CODIGO == codigo
+
                                  select new
                                  {
                                      pr.PRO_ID,
@@ -1311,7 +1328,9 @@ public class CarteraService : ICarteraService
                                      dm.DMO_CDIGITADA,
                                      td.TDE_NOMBRE, // MOTIVO
                                      dm.DMO_EMPRESA,
-                                     dm.DMO_FAC_COMPROBA
+                                     dm.DMO_FAC_COMPROBA,
+                                     dd.DVD_OBSERVACION_CALIDAD2
+
                                  }
                                ).ToListAsync();
 
@@ -1327,7 +1346,8 @@ public class CarteraService : ICarteraService
                     PRODUCTO = item.PRO_NOMBRE,
                     UNIDAD = item.UMD_ID,
                     CANTIDAD = item.DMO_CDIGITADA,
-                    MOTIVO = item.TDE_NOMBRE
+                    MOTIVO = item.TDE_NOMBRE,
+                    DVD_OBSERVACION_CALIDAD2 = item.DVD_OBSERVACION_CALIDAD2
                 });
             }
 
