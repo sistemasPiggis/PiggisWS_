@@ -258,6 +258,22 @@ public class DevolucionController : ControllerBase
 
 
     [Authorize]
+    [HttpPost("GetMetaDevs")]
+
+    public async Task<IActionResult> GetMetaDevs([FromBody] decimal agente)
+    {
+        var response = await _devolucionesService.GetMetaDevs(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+    [Authorize]
     [HttpPost("GetDevsNoGxAgeAsync")]
 
     public async Task<IActionResult> GetDevsNoGxAgeAsync([FromBody] decimal agente)
@@ -272,7 +288,5 @@ public class DevolucionController : ControllerBase
 
         return BadRequest(response.Message);
     }
-
-
 
 }

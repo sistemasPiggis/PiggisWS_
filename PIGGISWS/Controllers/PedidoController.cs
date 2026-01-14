@@ -269,4 +269,24 @@ public class PedidoController : Controller
     }
 
 
+    [Authorize]
+    [HttpPost("GetPedidosxRefs")]
+
+    public async Task<IActionResult> GetPedidosxRefs([FromBody] List<AuxGeneral> auxGeneralList)
+    {
+
+        var response = await _pedidoservice.GetPedidosxRefs(auxGeneralList);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+
+
 }

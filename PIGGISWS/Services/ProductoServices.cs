@@ -22,6 +22,7 @@ public class ProductoService : IProductoService
     string p_nav_CPR_ID = string.Empty;
     decimal p_nav_GPR_CODIGO = 0;
     int p_est_anulado;
+    string P_DIAS_PERMITIDOS = "";
     //int p_cli_cupo = 0;
     //string p_cli_estado = "";
     public ProductoService(ApplicationDbContext context)
@@ -38,6 +39,7 @@ public class ProductoService : IProductoService
         p_nav_CPR_ID = parametros.FirstOrDefault(p => p.CODIGO == 58)?.VALOR ?? "0";
         p_nav_GPR_CODIGO = Convert.ToDecimal(parametros.FirstOrDefault(p => p.CODIGO == 59)?.VALOR ?? "0");
         p_est_anulado = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 68)?.VALOR ?? "0");
+        P_DIAS_PERMITIDOS = parametros.First(p => p.CODIGO == 70)?.VALOR ?? "";
     }
 
 
@@ -148,7 +150,10 @@ public class ProductoService : IProductoService
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
         //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-        var diasPermitidos = new[] {  "DOMINGO" };
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                           .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                           .Select(d => d.Trim().ToUpper())
+                           .ToList();
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
 
@@ -168,10 +173,10 @@ public class ProductoService : IProductoService
                     && cc.CCO_ESTADO != p_est_anulado
                     && p.PRO_INACTIVO ==0
                     && cl.CLI_AGENTE == agente
-                    && (
-                                            diasPermitidos.Contains(dayformateado)
-                                            || (cld.CDI_DIA != null && cld.CDI_DIA == dayformateado)
-                                        )
+                   && (
+                                  diasPermitidos.Contains(dayformateado)
+                                  || cld.CDI_DIA == dayformateado
+                              )
               select new
               {
                   cd.DFAC_PRODUCTO,

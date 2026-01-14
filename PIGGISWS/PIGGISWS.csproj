@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-PIGGISWS-6adf65ac-4cea-44e8-a68c-8c1792186b48</UserSecretsId>
+
+	 
+	  
   </PropertyGroup>
 
   <ItemGroup>

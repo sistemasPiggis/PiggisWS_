@@ -24,4 +24,6 @@ public class TMP_DEV_PROD_CLI_AGE
     public decimal? PROCESA { get; set; }
     public DateTime ? FECHA_IMPRESION { get; set; }
     public decimal? USR_IMPRIME { get; set; }
+    
+   
 }

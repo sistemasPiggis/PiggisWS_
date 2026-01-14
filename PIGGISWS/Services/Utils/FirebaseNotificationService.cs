@@ -22,26 +22,44 @@ public class FirebaseNotificationService: IFirebaseNotificationService
 
 
     private readonly ApplicationDbContext _context;
-    private const string FirebaseServerKey = "AAAA47TFP4g:APA91bGASDjXVLGZpGqRdMDAvLGna-tLziR1imYaKsLfQhTa75Zpw79c2qB-seXvBF05dIQ1y23JmLEy3oeTHyjKfC59HrbzekjOsqfB-7W7osr05OYmuDeuu4bwnuhY0QS6y7dGvJ-b";
-    private const string FcmUrl = "https://fcm.googleapis.com/v1/projects/977990401928/messages:send";
+    //private const string FirebaseServerKey = "AAAA47TFP4g:APA91bGASDjXVLGZpGqRdMDAvLGna-tLziR1imYaKsLfQhTa75Zpw79c2qB-seXvBF05dIQ1y23JmLEy3oeTHyjKfC59HrbzekjOsqfB-7W7osr05OYmuDeuu4bwnuhY0QS6y7dGvJ-b";
+    //private const string FcmUrl = "https://fcm.googleapis.com/v1/projects/977990401928/messages:send";
     private readonly HttpClient _httpClient;
     private readonly ILogger<FirebaseNotificationService> _logger;
+    private readonly IConfiguration _configuration;
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
     
     int contador =0;
     int p_empresa;
     int p_not_inactivo;
     int p_not_procesada;
+    private string _firebaseServerKey;
+    private string _fcmUrl = "https://fcm.googleapis.com/v1/projects/{0}/messages:send"; // Usamos placeholder para el ProjectId
+    private string _serviceAccountKeyPath;
+    private string _projectId;
 
     // Constructor público para que el contenedor de dependencias pueda inyectarlo
-    public FirebaseNotificationService(HttpClient httpClient , ApplicationDbContext context, ILogger<FirebaseNotificationService> logger)
+    public FirebaseNotificationService(IConfiguration configuration, HttpClient httpClient , ApplicationDbContext context, ILogger<FirebaseNotificationService> logger)
     {
         _httpClient = httpClient;
         _context = context;
-        GetParametros();
         _logger = logger;
-    }
+        _configuration = configuration; // Asignación
 
+        // Cargar configuración inicial desde appsettings.json
+        CargarConfiguracion();
+        GetParametros();
+    }
+    private void CargarConfiguracion()
+    {
+        
+
+        _serviceAccountKeyPath = _configuration["Firebase:ServiceAccountKeyPath"];
+        _projectId = _configuration["Firebase:ProjectId"] ?? "977990401928"; // Valor por defecto o del JSON
+
+        // Construir la URL completa con el Project ID dinámico
+        _fcmUrl = string.Format(_fcmUrl, _projectId);
+    }
 
     public void GetParametros()
     {
@@ -55,7 +73,8 @@ public class FirebaseNotificationService: IFirebaseNotificationService
     public async Task<string> GetAccessTokenAsync()
     {
         GoogleCredential credential;
-        using (var stream = new FileStream("Firebase\\piggis-19039-firebase-adminsdk-z5ijt-5c3cce638c.json", FileMode.Open, FileAccess.Read))
+
+        using (var stream = new FileStream(_serviceAccountKeyPath, FileMode.Open, FileAccess.Read))
         {
             credential = GoogleCredential.FromStream(stream)
                 .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
@@ -117,7 +136,7 @@ public class FirebaseNotificationService: IFirebaseNotificationService
 
                 _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-                 var response = await _httpClient.PostAsync(FcmUrl, httpContent);
+                 var response = await _httpClient.PostAsync(_fcmUrl, httpContent);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -216,7 +235,7 @@ public class FirebaseNotificationService: IFirebaseNotificationService
 
                 _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-                var response = await _httpClient.PostAsync(FcmUrl, httpContent);
+                var response = await _httpClient.PostAsync(_fcmUrl, httpContent);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -236,8 +255,8 @@ public class FirebaseNotificationService: IFirebaseNotificationService
                     // Solo actualiza el campo específico
                     notificacion.NOT_PROCESADA = 1;
 
-                    // Guarda los cambios
-                    _context.SaveChanges();
+          
+                   await _context.SaveChangesAsync();
                 }
             }
            

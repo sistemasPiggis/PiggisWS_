@@ -1,5 +1,6 @@
 ﻿using PIGGISWS.Models;
 using PIGGISWS.Models.DTOs;
+using PIGGISWS.Models.Vistas;
 
 namespace PIGGISWS.Interfaces;
 
@@ -23,4 +24,6 @@ public interface IDevolucionesService
     Task<ServiceResponse<object>> GetTopIdvsNoGestxClienteAsync(decimal agente);
 
     Task<ServiceResponse<object>> GetDevsNoGxAgeAsync(decimal agente);
+
+    Task<ServiceResponse<VM_REPORTE_VENTAS2023>> GetMetaDevs(decimal agenteId);
 }

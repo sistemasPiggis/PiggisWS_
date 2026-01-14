@@ -101,7 +101,7 @@ public class CarteraController : ControllerBase
     [Authorize]
     [HttpPost("CreateFacturaCarteraAsync")]
 
-    public async Task<IActionResult> CreateFacturaCarteraAsync([FromBody] AuxCartera cartera)
+    public async Task<IActionResult> CreateFacturaCarteraAsync([FromBody] List<AuxCartera> cartera)
     {
         var response = await _carteraService.CreateFacturaCarteraAsync(cartera);
 

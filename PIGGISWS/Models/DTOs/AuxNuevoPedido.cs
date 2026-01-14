@@ -4,5 +4,6 @@
     public CComprobai? Ccomprobai { get; set; }
     public Ccomfaci? Ccomfaci { get; set; }
     public List<DFacturai>? DFacturai { get; set; }
+    public CCOMFACI_EXT? CCOMFACI_EXT { get; set; }
 
 }

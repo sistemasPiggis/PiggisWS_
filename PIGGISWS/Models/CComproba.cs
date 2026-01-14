@@ -19,6 +19,6 @@ public class CComproba
     public int CCO_MES { get; set; }
     public int CCO_PERIODO { get; set;}
     public decimal? CCO_CIE_COMPROBA { get; set;}
-
+    public int? CCO_ALMACEN { get; set; }
 
 }

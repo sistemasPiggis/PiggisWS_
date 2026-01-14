@@ -39,6 +39,7 @@ public class ClientesService : IClientesService
     string P_CLI_NOT_MAILS;
     string P_LISTA_PNAV = "";
     int P_NAVIDAD = 0;
+    string P_DIAS_PERMITIDOS = "";
     public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService, ILogger<DevolucionesService> logger)
     {
         _context = context;
@@ -61,6 +62,7 @@ public class ClientesService : IClientesService
         P_CLI_NOT_MAILS = parametros.First(p => p.CODIGO == 19)?.VALOR ?? "";
         P_LISTA_PNAV = parametros.First(p => p.CODIGO == 61)?.VALOR ?? "";
         P_NAVIDAD = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 60)?.VALOR ?? "0");
+        P_DIAS_PERMITIDOS = parametros.First(p => p.CODIGO == 70)?.VALOR ?? "";
     }
 
 
@@ -74,7 +76,10 @@ public class ClientesService : IClientesService
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
         //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-        var diasPermitidos = new[] { "DOMINGO" };
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                        .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(d => d.Trim().ToUpper()) 
+                        .ToList();
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
@@ -1044,8 +1049,9 @@ public class ClientesService : IClientesService
                                       TIPO_IDENTIFICACION = cn.TIPO_IDENTIFICACION,
                                       CREA_FECHA = cn.CREA_FECHA,
                                   })
-                 .OrderByDescending(x => x.CREA_FECHA)
+                
                  .Distinct()
+                  .OrderByDescending(x => x.CREA_FECHA)
                  .ToListAsync();
 
             if (clientes == null)
@@ -1064,7 +1070,7 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
-            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNuevos() " + ex.ToString());
+            _logger.LogError(" --------------------- ERROR NotFoundException ------------------ GetClientesNuevos() " + ex.ToString());
         }
         catch (Exception ex)
         {
@@ -1089,7 +1095,8 @@ public class ClientesService : IClientesService
                                   select new AuxGeneral
                                   {
                                       AuxInt = cl.CLI_BLOQUEO,
-                                      AuxDecimal = cl.CLI_CODIGO
+                                      AuxDecimal = cl.CLI_CODIGO, 
+                                      AGE_CODIGO = cl.CLI_CUPO ///// se reutriliza objeto
                                   }).ToListAsync();
             var cliente = clientes.FirstOrDefault();
 
@@ -1277,7 +1284,10 @@ public class ClientesService : IClientesService
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
         //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-        var diasPermitidos = new[] { "DOMINGO" };
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(d => d.Trim().ToUpper())
+                            .ToList();
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new List<decimal>();

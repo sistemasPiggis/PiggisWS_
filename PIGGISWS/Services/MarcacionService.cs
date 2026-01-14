@@ -6,7 +6,9 @@ using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Models.DTOs;
 using PIGGISWS.Models.Firebase;
+using PIGGISWS.Services.Utils;
 using PIGGISWS.Views.Marcaciones;
+using System.Globalization;
 
 namespace PIGGISWS.Services;
 
@@ -14,13 +16,13 @@ public class MarcacionService: IMarcacionService
 {
 
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<DevolucionesService> _logger;
+    private readonly ILogger<MarcacionService> _logger;
     ServiceResponse<object> respuesta = new ServiceResponse<object>();
 
     List<Parametros_Movil> parametros = new List<Parametros_Movil>();
     int p_empresa;
 
-    public MarcacionService(ApplicationDbContext context, ILogger<DevolucionesService> logger)
+    public MarcacionService(ApplicationDbContext context, ILogger<MarcacionService> logger)
     {
         _context = context;
         _logger = logger;
@@ -72,7 +74,11 @@ public class MarcacionService: IMarcacionService
 
     public async Task<ServiceResponse<object>> CreateMarcacionAsync(Tmp_Marcacion_Agente marcacion_Agente)
     {
+
         decimal mar_codigo = 0;
+       
+        string coordenadaUsada = "";
+        string tipoMovimiento = "";
         try
         {
 
@@ -129,7 +135,8 @@ public class MarcacionService: IMarcacionService
                     }
                     marcacion_Agente.ENTRADA1 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.ENTRADA1_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA1_MOVIL).ToString("HH:mm");
-
+                    coordenadaUsada = marcacion_Agente.UBICACION1;
+                    tipoMovimiento = "ENTRADA 1";
                 }
                 if (!string.IsNullOrEmpty(marcacion_Agente.SALIDA1_MOVIL))
                 {
@@ -139,7 +146,8 @@ public class MarcacionService: IMarcacionService
                     }
                     marcacion_Agente.SALIDA1 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.SALIDA1_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA1_MOVIL).ToString("HH:mm");
-
+                    coordenadaUsada = marcacion_Agente.UBICACION2;
+                    tipoMovimiento = "SALIDA 1";
                 }
                 if (!string.IsNullOrEmpty(marcacion_Agente.ENTRADA2_MOVIL))
                 {
@@ -149,6 +157,8 @@ public class MarcacionService: IMarcacionService
                     }
                     marcacion_Agente.ENTRADA2 = DateTime.Now.ToString("HH:mm");
                     marcacion_Agente.ENTRADA2_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA2_MOVIL).ToString("HH:mm");
+                    coordenadaUsada = marcacion_Agente.UBICACION3;
+                    tipoMovimiento = "ENTRADA 2";
                 }
                 if (!string.IsNullOrEmpty(marcacion_Agente.SALIDA2_MOVIL))
                 {
@@ -159,6 +169,8 @@ public class MarcacionService: IMarcacionService
 
                     marcacion_Agente.SALIDA2 = DateTime.Now.ToString("HH:mm:ss");
                     marcacion_Agente.SALIDA2_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA2_MOVIL).ToString("HH:mm");
+                    coordenadaUsada = marcacion_Agente.UBICACION4;
+                    tipoMovimiento = "SALIDA 2";
                 }
 
                 marcacion_Agente.ID_MARCACION = mar_codigo;
@@ -178,6 +190,8 @@ public class MarcacionService: IMarcacionService
                     registroExistente.ENTRADA1_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA1_MOVIL).ToString("HH:mm");
                     registroExistente.ENTRADA1 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION1 = marcacion_Agente.UBICACION1;
+                    coordenadaUsada = marcacion_Agente.UBICACION1;
+                    tipoMovimiento = "ENTRADA 1";
                 }
                 if (string.IsNullOrEmpty(registroExistente.SALIDA1_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.SALIDA1_MOVIL))
 
@@ -189,6 +203,8 @@ public class MarcacionService: IMarcacionService
                     registroExistente.SALIDA1_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA1_MOVIL).ToString("HH:mm");
                     registroExistente.SALIDA1 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION2 = marcacion_Agente.UBICACION2;
+                    coordenadaUsada = marcacion_Agente.UBICACION2;
+                    tipoMovimiento = "SALIDA 1";
                 }
                 if (string.IsNullOrEmpty(registroExistente.ENTRADA2_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.ENTRADA2_MOVIL))
                 {
@@ -199,6 +215,8 @@ public class MarcacionService: IMarcacionService
                     registroExistente.ENTRADA2_MOVIL = DateTime.Parse(marcacion_Agente.ENTRADA2_MOVIL).ToString("HH:mm");
                     registroExistente.ENTRADA2 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION3 = marcacion_Agente.UBICACION3;
+                    coordenadaUsada = marcacion_Agente.UBICACION3;
+                    tipoMovimiento = "ENTRADA 2";
                 }
                 if (string.IsNullOrEmpty(registroExistente.SALIDA2_MOVIL) && !string.IsNullOrEmpty(marcacion_Agente.SALIDA2_MOVIL))
                 {
@@ -209,15 +227,39 @@ public class MarcacionService: IMarcacionService
                     registroExistente.SALIDA2_MOVIL = DateTime.Parse(marcacion_Agente.SALIDA2_MOVIL).ToString("HH:mm");
                     registroExistente.SALIDA2 = DateTime.Now.ToString("HH:mm");
                     registroExistente.UBICACION4 = marcacion_Agente.UBICACION4;
+
+                    coordenadaUsada = marcacion_Agente.UBICACION4;
+                    tipoMovimiento = "SALIDA 2";
                 }
 
             }
 
             await _context.SaveChangesAsync();
+
+            string estadoCerca = "";
+            if (!string.IsNullOrEmpty(coordenadaUsada))
+            {
+                
+                estadoCerca = await VerificarEstadoGeocerca(
+                    marcacion_Agente.ID_EMPRESA,
+                    marcacion_Agente.AGE_CODIGO,
+                    coordenadaUsada
+                );
+
+               
+               
+            }
             var ultimoRegistro = (registroExistente == null) ? marcacion_Agente : registroExistente;
             respuesta.Data = ultimoRegistro;
             respuesta.Success = true;
-            respuesta.Message = "Marcación guardada correctamente.";
+            if (!string.IsNullOrEmpty(estadoCerca))
+            {
+                respuesta.Message = $"Marcación guardada. Ubicación: {estadoCerca}";
+            }
+            else
+            {
+                respuesta.Message = "Marcación guardada correctamente.";
+            }
             return respuesta;
         }
         catch (Exception ex)
@@ -265,5 +307,105 @@ public class MarcacionService: IMarcacionService
         }
         return response;
     }
+
+
+
+    //// VALIDAR UBICACIÒN DENTRO DE GEO CERCAS
+    private async Task<string> VerificarEstadoGeocerca(int idEmpresa, decimal ageCodigo, string coordenadasString)
+    {
+        if (string.IsNullOrEmpty(coordenadasString)) return "SIN COORDENADAS";
+
+        try
+        {
+            
+            var partes = coordenadasString.Split(',');
+            if (partes.Length != 2) return "ERROR COORDENADAS";
+
+            double latUsuario = double.Parse(partes[0].Trim().Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
+            double lonUsuario = double.Parse(partes[1].Trim().Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
+
+            System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
+
+            // Crea un objeto CultureInfo en español
+            CultureInfo ci = new CultureInfo("es-ES");
+            string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+          
+            string dayformateado = dayName.ToUpper();
+            dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
+
+
+            var todosLosPuntos = await _context.MAP_CERCA_AGENTE 
+                .Where(x => x.ID_EMPRESA == idEmpresa
+                         && x.AGE_CODIGO == ageCodigo
+                         && x.DIA == dayformateado)
+                .Select(x => new { x.LATITUD, x.LONGITUD, x.ID_MAP_CERCA, x.SECUENCIA }) 
+                .ToListAsync();
+
+            if (todosLosPuntos == null || !todosLosPuntos.Any()) return "SIN RUTA CONFIGURADA";
+
+            
+            var poligonos = todosLosPuntos.GroupBy(x => x.SECUENCIA);
+
+            bool estaDentroDeAlguna = false;
+
+            foreach (var grupo in poligonos)
+            {
+               
+                var listaPuntos = grupo.OrderBy(x => x.ID_MAP_CERCA).Cast<dynamic>().ToList();
+
+              
+                if (PuntoEstaEnPoligono(latUsuario, lonUsuario, listaPuntos))
+                {
+                    estaDentroDeAlguna = true;
+                    break; 
+                }
+            }
+
+            return estaDentroDeAlguna ? "DENTRO DE RUTA" : "FUERA DE RUTA";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error calculando geocerca: {ex.Message}");
+            return "ERROR VALIDACION";
+        }
+    }
+
+
+
+
+    private bool PuntoEstaEnPoligono(double latitud, double longitud, List<dynamic> poligono)
+    {
+        bool inside = false;
+
+       
+        double ToDouble(object valor)
+        {
+            if (valor == null) return 0;
+            string valStr = valor.ToString().Trim().Replace(',', '.'); // Asegura formato 0.00
+            if (double.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double result))
+            {
+                return result;
+            }
+            return 0;
+        }
+
+        for (int i = 0, j = poligono.Count - 1; i < poligono.Count; j = i++)
+        {
+            // CORRECCIÓN AQUÍ: Usamos el helper ToDouble en lugar de (double)
+            double xi = ToDouble(poligono[i].LATITUD);
+            double yi = ToDouble(poligono[i].LONGITUD);
+            double xj = ToDouble(poligono[j].LATITUD);
+            double yj = ToDouble(poligono[j].LONGITUD);
+
+            bool intersect = ((yi > longitud) != (yj > longitud))
+                && (latitud < (xj - xi) * (longitud - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+    ///
+
+
+
 
 }
