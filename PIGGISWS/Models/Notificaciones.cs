@@ -14,4 +14,5 @@ public class Notificaciones
     public int NOT_TIPO { get; set; }
     public int NOT_PROCESADA { get; set; }
     public DateTime CREA_FECHA { get; set; }
+    public int? APP_DESTINO { get; set; }
 }

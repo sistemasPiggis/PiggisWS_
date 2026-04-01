@@ -145,12 +145,12 @@ public class AgenteService: IAgenteService
         }
         catch (NotFoundException ex)
         {
-            _logger.LogError(" --------------------- ERROR ------------------ GetAgente() " + ex.ToString() + agente);
+            _logger.LogError(" --------------------- ERROR ------------------ GetUsuarioAsync() " + ex.ToString() + agente);
             return ex.Message;
         }
         catch (Exception ex)
         {
-            _logger.LogError(" --------------------- ERROR ------------------ GetAgente() " + ex.ToString() + agente);
+            _logger.LogError(" --------------------- ERROR ------------------ GetUsuarioAsync() " + ex.ToString() + agente);
             return ex.Message;
         }
 

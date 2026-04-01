@@ -2,7 +2,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph.CallRecords;
-using PIGGISWS.Controllers;
 using PIGGISWS.Models;
 using PIGGISWS.Models.DTOs;
 using PIGGISWS.Models.Vistas;

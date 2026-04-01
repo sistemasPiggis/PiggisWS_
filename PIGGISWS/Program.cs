@@ -81,7 +81,16 @@ builder.Logging.AddConsole(); // Para loggear en la consola
 builder.Logging.AddDebug(); // Para loggear en la ventana de salida de Visual Studio
 builder.Logging.AddEventSourceLogger(); // Otras opciones de logging
 
+
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
 var app = builder.Build();
+
+app.UseResponseCompression();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(options =>
   options.WithOrigins("*")

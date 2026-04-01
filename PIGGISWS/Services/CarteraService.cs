@@ -408,7 +408,8 @@ public class CarteraService : ICarteraService
                     bool yaExisteHoy = await _context.CARTERA.AnyAsync(c =>
                             c.CRT_DOCTRAN == item.dDocumento.DDO_DOCTRAN &&
                             
-                            c.CREA_FECHA.Value.Date == hoy.Date);
+                            c.CREA_FECHA.Value.Date == hoy.Date
+                            && c.CRT_AGENTE !=null);
 
                     if (yaExiste || yaExisteHoy)
                     {

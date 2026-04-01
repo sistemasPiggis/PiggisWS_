@@ -10,6 +10,7 @@ using PIGGISWS.Models.DTOs;
 using PIGGISWS.Models.Vistas;
 using PIGGISWS.Services.Utils;
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using static Google.Apis.Requests.BatchRequest;
@@ -452,7 +453,7 @@ public class DevolucionesService : IDevolucionesService
         var response = new ServiceResponse<object>();
         try
         {
-
+            //Stopwatch cronometro = new Stopwatch();
 
             var secuenciales = await (from ext in _context.DEVOLUCION_EXT
                                       join ca in _context.DEVOLUCION_CAB on ext.DEV_CODIGO equals ca.DEV_CODIGO
@@ -461,6 +462,10 @@ public class DevolucionesService : IDevolucionesService
                                       orderby ext.DEV_SECUENCIAL_MOVIL descending
                                       select ext.DEV_SECUENCIAL_MOVIL).ToListAsync();
             decimal ultimosec = Convert.ToDecimal(secuenciales.FirstOrDefault());
+
+
+            //cronometro.Stop();
+            //_logger.LogInformation($"------------------XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX----------------[PERFORMANCE TOTAL] Todo el bloque de Descuentos tardó: {cronometro.ElapsedMilliseconds} ms");
             if (ultimosec == 0)
             {
                 response.Data = 0;
@@ -473,6 +478,9 @@ public class DevolucionesService : IDevolucionesService
             response.Success = true;
             response.Message = "DATOS ENCONTRADOS EXISTOSAMENTE";
             return response;
+
+         
+
         }
         catch (Exception ex)
         {

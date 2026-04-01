@@ -352,6 +352,7 @@ public class PedidoService : IPedidoService
 
         // 1. Validaciones Iniciales
         var _almacen = await _context.BODEGA.Where(b => b.BOD_CODIGO == auxNuevoPedidos.Ccomprobai.CCO_BODEGA).ToListAsync();
+        DateTime fecpedorg = auxNuevoPedidos.CCOMFACI_EXT?.CFAI_FECHA_CREACION_ORG_DT ?? _fecha;
         int almacen = _almacen.Select(a => a.BOD_ALMACEN).FirstOrDefault() ?? 0;
 
         valiped = await ValidaPedExisteAsync(auxNuevoPedidos);
@@ -377,7 +378,7 @@ public class PedidoService : IPedidoService
             return response;
         }
 
-        var horario = await _ruteroService.ValidaHoraPedidoAsync(auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0, _fecha, almacen);
+        var horario = await _ruteroService.ValidaHoraPedidoAsync(auxNuevoPedidos.Ccomprobai.CCO_AGENTE ?? 0, fecpedorg, almacen);
         if (horario.Data != null)
         {
             if (horario.Success == false)
@@ -550,14 +551,31 @@ public class PedidoService : IPedidoService
                             var fechaActual = DateTime.Today;
 
 
-                            var preciosDict = await _context.DLISTAPRE
+                   
+                            var preciosList = await _context.DLISTAPRE
                                 .Where(d => d.DLP_LISTAPRE == lprecio
                                          && productosIds.Contains(d.DLP_PRODUCTO)
                                          && d.DLP_FECHA_INI <= fechaActual
                                          && (d.DLP_FECHA_FIN == null || d.DLP_FECHA_FIN >= fechaActual)
                                          && (d.DLP_INACTIVO ?? 0) == 0)
-                                .Select(d => new { d.DLP_PRODUCTO, d.DLP_PRECIO })
-                                .ToDictionaryAsync(x => x.DLP_PRODUCTO, x => x.DLP_PRECIO);
+                           
+                                .Select(d => new { d.DLP_PRODUCTO, d.DLP_PRECIO, d.CREA_FECHA })
+                                .ToListAsync(); 
+
+                
+                            var preciosDict = preciosList
+                                .GroupBy(d => d.DLP_PRODUCTO)
+                                .Select(g => g.OrderByDescending(x => x.CREA_FECHA).First())
+                                .ToDictionary(x => x.DLP_PRODUCTO, x => x.DLP_PRECIO);
+
+                            //var preciosDict = await _context.DLISTAPRE
+                            //    .Where(d => d.DLP_LISTAPRE == lprecio
+                            //             && productosIds.Contains(d.DLP_PRODUCTO)
+                            //             && d.DLP_FECHA_INI <= fechaActual
+                            //             && (d.DLP_FECHA_FIN == null || d.DLP_FECHA_FIN >= fechaActual)
+                            //             && (d.DLP_INACTIVO ?? 0) == 0)
+                            //    .Select(d => new { d.DLP_PRODUCTO, d.DLP_PRECIO })
+                            //    .ToDictionaryAsync(x => x.DLP_PRODUCTO, x => x.DLP_PRECIO);
 
 
 
