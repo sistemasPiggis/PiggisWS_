@@ -96,7 +96,7 @@ namespace PIGGISWS.Services.Utils
                         _logger.LogError(ex, "Error al ejecutar ExecuteNotAppAgentesAsync.");
                     }
                 }
-                await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
     }

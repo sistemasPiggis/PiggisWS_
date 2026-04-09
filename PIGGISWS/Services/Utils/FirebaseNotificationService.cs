@@ -68,7 +68,6 @@ public class FirebaseNotificationService : IFirebaseNotificationService
         p_empresa = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 3)?.VALOR ?? "0");
     }
 
-
     public async Task<string> GetAccessTokenAsync()
     {
         return await GetAccessTokenPersonalizadoAsync(_serviceAccountKeyPath);
@@ -272,25 +271,20 @@ public class FirebaseNotificationService : IFirebaseNotificationService
         return _response;
     }
 
-
-    public async Task<ServiceResponse<object>> RegistrarAPPAsync(Fcm_Token fcm_Token)
+    public async Task<ServiceResponse<object>> RegistrarAPPAsync(Fcm_Token requestToken)
     {
         var _response = new ServiceResponse<object>();
         try
         {
             decimal empleadoId = 0;
             string usuario = "";
-
-            // 1. Identificar si la acción es un LOGOUT (Agente = 0)
-            bool esLogout = fcm_Token.FCM_EMP_CODIGO == "0" || string.IsNullOrEmpty(fcm_Token.FCM_EMP_CODIGO);
-
+            bool esLogout = requestToken.FCM_EMP_CODIGO == "0" || string.IsNullOrEmpty(requestToken.FCM_EMP_CODIGO);
             if (!esLogout)
             {
-                if (decimal.TryParse(fcm_Token.FCM_EMP_CODIGO, out decimal agenteCodigo))
+                if (decimal.TryParse(requestToken.FCM_EMP_CODIGO, out decimal agenteCodigo))
                 {
                     var agentes = await (from e in _context.AGENTE
-                                         where e.AGE_CODIGO == agenteCodigo
-                                         && e.AGE_INACTIVO == 0
+                                         where e.AGE_CODIGO == agenteCodigo && e.AGE_INACTIVO == 0
                                          select e.AGE_EMPLEADO).ToListAsync();
 
                     empleadoId = agentes.FirstOrDefault() ?? 0;
@@ -304,54 +298,58 @@ public class FirebaseNotificationService : IFirebaseNotificationService
                     return _response;
                 }
             }
+            var tokenExistentes = await _context.FCM_TOKEN
+                .Where(t => t.FCM_TOKEN == requestToken.FCM_TOKEN && t.APP == requestToken.APP).ToListAsync();
 
-            var tokensExistentes = await _context.FCM_TOKEN
-                .Where(t => t.APP == fcm_Token.APP )
-                .ToListAsync();
-
-            var tokenExistente = tokensExistentes.FirstOrDefault();
-
+            var  tokenExistente = tokenExistentes.FirstOrDefault();
             if (tokenExistente != null)
             {
                 if (esLogout)
                 {
                     _context.FCM_TOKEN.Remove(tokenExistente);
-                    _logger.LogInformation($"Token {fcm_Token.APP} ELIMINADO físicamente por cierre de sesión.");
+                    _logger.LogInformation($"Token {requestToken.FCM_TOKEN} ELIMINADO físicamente por cierre de sesión.");
                 }
                 else
                 {
                     tokenExistente.FCM_EMP_CODIGO = empleadoId.ToString();
-                    tokenExistente.FCM_OS = fcm_Token.FCM_OS;
+                    tokenExistente.FCM_OS = requestToken.FCM_OS;
                     tokenExistente.MOD_FECHA = DateTime.Now;
                     tokenExistente.MOD_USR = usuario;
-                    _logger.LogInformation($"Token {fcm_Token.APP} reasignado al empleado: {empleadoId}");
+
+                    _context.FCM_TOKEN.Update(tokenExistente);
+                    _logger.LogInformation($"Token {requestToken.APP} reasignado/actualizado al empleado: {empleadoId}");
                 }
             }
             else
             {
-                if (!esLogout && empleadoId != 0)
+                if (esLogout)
                 {
+                    _logger.LogInformation($"Se solicitó logout de un token inexistente. Ignorado.");
+                }
+                else if (empleadoId != 0) 
+                {
+                    // 3. INSERTAR EL NUEVO DISPOSITIVO
                     decimal fcm_codigo = await ObtenerSiguienteSecuencialAsync();
 
                     var nuevoRegistro = new Fcm_Token
                     {
                         FCM_EMP_CODIGO = empleadoId.ToString(),
-                        FCM_TOKEN = fcm_Token.FCM_TOKEN,
-                        APP = fcm_Token.APP,
+                        FCM_TOKEN = requestToken.FCM_TOKEN, 
+                        APP = requestToken.APP,
                         FCM_CODIGO = fcm_codigo,
-                        FCM_OS = fcm_Token.FCM_OS,
+                        FCM_OS = requestToken.FCM_OS,
+                        CREA_FECHA = DateTime.Now,
                         CREA_USR = usuario
                     };
 
                     _context.FCM_TOKEN.Add(nuevoRegistro);
-                    _logger.LogInformation($"Nuevo token insertado para el empleado: {empleadoId} | APP: {fcm_Token.APP}");
+                    _logger.LogInformation($"Nuevo token insertado para el empleado: {empleadoId} | APP: {requestToken.APP}");
                 }
             }
 
-            // 3. Guardar cambios (Ejecuta el DELETE, UPDATE o INSERT según corresponda)
-            int save = await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-            _response.Data = fcm_Token.FCM_TOKEN;
+            _response.Data = requestToken.FCM_TOKEN;
             _response.Message = esLogout ? "Dispositivo desvinculado y eliminado correctamente." : "Aplicación y Token sincronizados exitosamente.";
             _response.Success = true;
         }
@@ -363,7 +361,6 @@ public class FirebaseNotificationService : IFirebaseNotificationService
         }
         return _response;
     }
-
 
     private async Task<decimal> ObtenerSiguienteSecuencialAsync()
     {
@@ -385,8 +382,6 @@ public class FirebaseNotificationService : IFirebaseNotificationService
         return fcm_codigo;
     }
     
-
-
     public async Task<ServiceResponse<object>> NotAppAgentesAsync()
     {
         var _response = new ServiceResponse<object>();
@@ -397,16 +392,20 @@ public class FirebaseNotificationService : IFirebaseNotificationService
         try
         {
             var listado = await (from n in _context.NOTIFICACIONES
-                                 join ng in _context.NOTIFICACIONES_GRUPOS on n.NOT_CODIGO equals ng.NOT_NOT_CODIGO
-                                 join em in _context.EMPLEADO on ng.NOT_EMP_CODIGO equals em.EMP_CODIGO
-                                 join fc in _context.FCM_TOKEN on em.EMP_CODIGO.ToString() equals fc.FCM_EMP_CODIGO
-                                 where !n.NOT_DESCRIPCION.ToUpper().Contains(nocontiene)
-                                 && n.NOT_INACTIVO == p_not_inactivo
-                                 && n.NOT_PROCESADA == p_not_procesada
-                                 && n.NOT_COMUNICADO != null
-                                 && n.CREA_FECHA >= FECHA
-                                 && n.APP_DESTINO == 1 ///// Solo notificaciones destinadas a AppAgentes
-                                 && fc.APP == "APPAGENTES" 
+                                    
+                                 where n.APP_DESTINO == 1
+                                    && n.NOT_INACTIVO == p_not_inactivo
+                                    && n.NOT_PROCESADA == p_not_procesada
+                                    && n.NOT_COMUNICADO != null
+                                    && n.CREA_FECHA >= FECHA
+                                    //&& !n.NOT_DESCRIPCION.ToUpper().Contains(nocontiene)
+                                 join ng in _context.NOTIFICACIONES_GRUPOS
+                                    on n.NOT_CODIGO equals ng.NOT_NOT_CODIGO
+                                 join em in _context.EMPLEADO
+                                    on ng.NOT_EMP_CODIGO equals em.EMP_CODIGO
+                                 join fc in _context.FCM_TOKEN
+                                    on em.EMP_CODIGO.ToString() equals fc.FCM_EMP_CODIGO
+                                 where fc.APP == "APPAGENTES"
 
                                  select new
                                  {
