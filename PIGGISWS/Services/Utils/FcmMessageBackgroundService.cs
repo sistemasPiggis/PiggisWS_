@@ -47,7 +47,7 @@ namespace PIGGISWS.Services.Utils
 
 
                 // Espera 30 horas (108000000 ms)
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
             }
         }
 
