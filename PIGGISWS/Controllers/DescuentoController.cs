@@ -28,7 +28,7 @@ public class DescuentoController : ControllerBase
     [Authorize]
     [HttpPost("GetDescuentoxAgenteAsync/{agente}")] 
 
-    public async Task<IActionResult> GetDescuentosxAgenteAsync([FromBody] int agente)
+    public async Task<IActionResult> GetDescuentosxAgenteAsync(int agente)
     {
         var response = await _decuentoService.GetDescuentoxAgenteAsync(agente);
 

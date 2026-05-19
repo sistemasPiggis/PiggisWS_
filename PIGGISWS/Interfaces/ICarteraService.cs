@@ -9,7 +9,7 @@ public interface ICarteraService
     Task<ServiceResponse<object>> GetCarteraxAgenteReporteAsync(int agente);
     Task<ServiceResponse<object>> GetCarteraxFacturaDiaAsync(Cartera cartera);
 
-    Task<ServiceResponse<object>> CreateFacturaCarteraAsync(AuxCartera cartera);
+    Task<ServiceResponse<object>> CreateFacturaCarteraAsync(List<AuxCartera> cartera);
     Task<ServiceResponse<object>> GetClientesNcsAsync(decimal agente);
 
     Task<ServiceResponse<object>> GetNcsxCodigoAsync(decimal codigo);

@@ -3,6 +3,7 @@ using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
 using PIGGISWS.Services.Utils;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 
@@ -22,6 +23,7 @@ public class ProductoService : IProductoService
     string p_nav_CPR_ID = string.Empty;
     decimal p_nav_GPR_CODIGO = 0;
     int p_est_anulado;
+    string P_DIAS_PERMITIDOS = "";
     //int p_cli_cupo = 0;
     //string p_cli_estado = "";
     public ProductoService(ApplicationDbContext context)
@@ -38,6 +40,7 @@ public class ProductoService : IProductoService
         p_nav_CPR_ID = parametros.FirstOrDefault(p => p.CODIGO == 58)?.VALOR ?? "0";
         p_nav_GPR_CODIGO = Convert.ToDecimal(parametros.FirstOrDefault(p => p.CODIGO == 59)?.VALOR ?? "0");
         p_est_anulado = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 68)?.VALOR ?? "0");
+        P_DIAS_PERMITIDOS = parametros.First(p => p.CODIGO == 70)?.VALOR ?? "";
     }
 
 
@@ -52,29 +55,40 @@ public class ProductoService : IProductoService
         {
 
             var listaprecios = await _context.CLIENTE
-                             .Where(cl => cl.CLI_EMPRESA == p_empresa
-                             && cl.CLI_AGENTE == agente
-                             && (cl.CLI_INACTIVO ?? 0) == p_cli_Inactivo
-                             && cl.CLI_LISTAPRE != null)
-                            .Select(cl => cl.CLI_LISTAPRE ?? 0) 
-                            .Distinct()
-                            .ToListAsync();
+                    .Where(cl => cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_AGENTE == agente
+                              && (p_cli_Inactivo == 0
+                                  ? (cl.CLI_INACTIVO == 0 || cl.CLI_INACTIVO == null)
+                                  : cl.CLI_INACTIVO == p_cli_Inactivo)
+                              && cl.CLI_LISTAPRE != null)
+                    .Select(cl => cl.CLI_LISTAPRE.Value) 
+                    .Distinct()
+                    .ToListAsync();
 
+            //Stopwatch stopwatchProductos = Stopwatch.StartNew();
 
+            var productos = await (from l in _context.LISTAPRE
+                                   join dl in _context.DLISTAPRE
+                                       on new { Codigo = l.LPR_CODIGO, Empresa = l.LPR_EMPRESA }
+                                       equals new { Codigo = (long)dl.DLP_LISTAPRE, Empresa = dl.DLP_EMPRESA }
 
-            var productos = await (from l in _context.LISTAPRE 
-                                   join dl in _context.DLISTAPRE on l.LPR_CODIGO equals dl.DLP_LISTAPRE
-                                   join p in _context.PRODUCTO on dl.DLP_PRODUCTO equals p.PRO_CODIGO
-                                   join u in _context.UMEDIDA on p.PRO_UNIDAD equals u.UMD_CODIGO
+                                   join p in _context.PRODUCTO
+                                       on new { Prod = dl.DLP_PRODUCTO, Empresa = dl.DLP_EMPRESA }
+                                       equals new { Prod = p.PRO_CODIGO, Empresa = p.PRO_EMPRESA }
+
+                                   join u in _context.UMEDIDA
+                                       on new { Ubi = p.PRO_UNIDAD, Empresa = p.PRO_EMPRESA }
+                                       equals new { Ubi = (int?)u.UMD_CODIGO, Empresa = u.UMD_EMPRESA }
+
                                    where p.PRO_EMPRESA == p_empresa
-                                     && p.PRO_INACTIVO != 1
-                                     && (p.PRO_CRITICO ?? 0) == 0
-                                     && (p.PRO_INACTIVO ?? 0) == 0
+                                     && listaprecios.Contains(l.LPR_CODIGO)
                                      && dl.DLP_FECHA_INI <= fechaActual
                                      && (dl.DLP_FECHA_FIN == null || dl.DLP_FECHA_FIN >= fechaActual)
-                                     && listaprecios.Contains(l.LPR_CODIGO)
-                                     && (dl.DLP_INACTIVO ?? 0) == 0
-                                     //&& p.PRO_CODIGO == 90002865
+
+                                   
+                                     && (p.PRO_CRITICO == 0 || p.PRO_CRITICO == null)
+                                     && (p.PRO_INACTIVO == 0 || p.PRO_INACTIVO == null)
+                                     && (dl.DLP_INACTIVO == 0 || dl.DLP_INACTIVO == null)
 
                                    select new
                                    {
@@ -91,19 +105,14 @@ public class ProductoService : IProductoService
                                        p.PRO_PROMOCION,
                                        DESTACADO = p.PRO_PROMOCION == 1,
                                        dl.DLP_PRECIO
-                                       
-                                       //lp.DLP_PRECIO2,
-                                       //lp.DLP_DESCUENTO
-                                   })
-                                    .ToListAsync();
+                                   }).ToListAsync();
 
 
 
 
+            //stopwatchProductos.Stop();
 
-
-
-
+            //Debug.WriteLine($"-----------------------------------------   ----------------[PERFORMANCE] Descarga de {productos.Count} Productos tardó: {stopwatchProductos.ElapsedMilliseconds} ms ({(stopwatchProductos.ElapsedMilliseconds / 1000.0):F2} segundos)"); 
             if (productos == null || !productos.Any())
             {
                 response.Data = productos;
@@ -148,7 +157,10 @@ public class ProductoService : IProductoService
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
         //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-        var diasPermitidos = new[] {  "DOMINGO" };
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                           .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                           .Select(d => d.Trim().ToUpper())
+                           .ToList();
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
 
@@ -168,10 +180,10 @@ public class ProductoService : IProductoService
                     && cc.CCO_ESTADO != p_est_anulado
                     && p.PRO_INACTIVO ==0
                     && cl.CLI_AGENTE == agente
-                    && (
-                                            diasPermitidos.Contains(dayformateado)
-                                            || (cld.CDI_DIA != null && cld.CDI_DIA == dayformateado)
-                                        )
+                   && (
+                                  diasPermitidos.Contains(dayformateado)
+                                  || cld.CDI_DIA == dayformateado
+                              )
               select new
               {
                   cd.DFAC_PRODUCTO,

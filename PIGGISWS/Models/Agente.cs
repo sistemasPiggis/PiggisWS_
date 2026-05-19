@@ -30,6 +30,7 @@ public class Agente
 
     public decimal? AGE_REPORTA { get; set; }
     public string? AGE_MAIL { get; set; } = string.Empty;
+    public int? AGE_ALMACEN { get; set; } 
 
     //public string? AGE_TELEFONO { get; set; }
 }

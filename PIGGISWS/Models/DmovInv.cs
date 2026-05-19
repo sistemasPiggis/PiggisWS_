@@ -1,4 +1,6 @@
-﻿namespace PIGGISWS.Models;
+﻿using Microsoft.Graph;
+
+namespace PIGGISWS.Models;
 
 public class DmovInv
 {
@@ -13,6 +15,8 @@ public class DmovInv
 
         public int DMO_UDIGITADA { get; set; }
         public int DMO_TIPODEV { get; set; }
+
+    public string? DMO_CONCEPTO { get; set; } = string.Empty; 
 
     
 }

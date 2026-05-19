@@ -20,7 +20,8 @@ namespace PIGGISWS.Services.Utils
             var marcacionesTask = ExecuteMarcacionesAsync(stoppingToken);
             var notificationsTask = ExecuteNotificationsAsync(stoppingToken);
 
-            await Task.WhenAll(marcacionesTask, notificationsTask);
+            var notificAppAgentesTask = ExecuteNotAppAgentesAsync(stoppingToken);
+            await Task.WhenAll(marcacionesTask, notificationsTask, notificAppAgentesTask);
 
 
  
@@ -46,7 +47,7 @@ namespace PIGGISWS.Services.Utils
 
 
                 // Espera 30 horas (108000000 ms)
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
             }
         }
 
@@ -72,6 +73,30 @@ namespace PIGGISWS.Services.Utils
 
                 // Espera 10 minutos (600000 ms)
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            }
+        }
+
+
+
+        private async Task ExecuteNotAppAgentesAsync(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                using (var scope = _serviceProvider.CreateScope()) // Crear un nuevo ámbito
+                {
+                    var firebaseNotificationService = scope.ServiceProvider.GetRequiredService<IFirebaseNotificationService>();
+                    try
+                    {
+                        await firebaseNotificationService.NotAppAgentesAsync();
+
+                        _logger.LogInformation("Se ha ejecutado ExecuteNotAppAgentesAsync.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al ejecutar ExecuteNotAppAgentesAsync.");
+                    }
+                }
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
     }

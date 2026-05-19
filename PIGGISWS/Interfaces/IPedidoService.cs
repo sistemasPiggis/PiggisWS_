@@ -19,4 +19,5 @@ public interface IPedidoService
     Task<ServiceResponse<object>> GetPedidosNavidadAsync(decimal agente);
 
     Task<ServiceResponse<object>> GetPedidoNavidadDAsync(AuxGeneral auxGeneral);
+    Task<ServiceResponse<List<AuxGeneral>>> GetPedidosxRefs(List<AuxGeneral> auxGeneralList);
 }

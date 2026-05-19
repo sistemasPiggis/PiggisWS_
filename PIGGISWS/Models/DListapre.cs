@@ -13,6 +13,7 @@ public class DListapre
     public int? DLP_INACTIVO { get; set; }
     public DateTime DLP_FECHA_INI { get; set; }
     public DateTime? DLP_FECHA_FIN {  get; set; }
+    public DateTime? CREA_FECHA { get; set; }
     public decimal DLP_DESCUENTO { get; set; }
     public decimal DLP_PRECIO2 { get; set; }
 }

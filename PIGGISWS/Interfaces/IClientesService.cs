@@ -20,4 +20,8 @@ public interface IClientesService
     Task<ServiceResponse<object>> GetClienteBloqueoAsync(decimal Cod_cliente);
 
     Task<ServiceResponse<object>> GetClientesNavidadxAgente(decimal agente);
+    Task<ServiceResponse<List<ClienteMetadataDto>>> GetClientesMetadataxAgente(decimal agente);
+
+    Task<List<decimal>> GetCodsClientesDiaxAgente(decimal agente);
+    Task<ServiceResponse<List<ClienteDto>>> GetClientesxCodigoAsync(AuxGeneral auxclientes);
 }

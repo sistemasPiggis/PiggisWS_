@@ -25,5 +25,6 @@ public class Cartera
     public int? CRT_ESTADO { get; set; }
     public decimal? CRT_EMPLEADO { get; set; }
     public string? CREA_USR { get; set; }
+    public DateTime? CREA_FECHA { get; set; }
 
 }

@@ -14,6 +14,9 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Text;
 
+using System.Security.Cryptography;
+
+
 namespace PIGGISWS.Services;
 
 public class ClientesService : IClientesService
@@ -21,6 +24,7 @@ public class ClientesService : IClientesService
     private readonly ApplicationDbContext _context;
     private readonly IEmailService _emailService;
     private readonly IAgenteService _agenteService;
+    private readonly ILogger<DevolucionesService> _logger;
     // GET: Clienteprivate readonly ApplicationDbContext _context;
     ModelResponse model = new ModelResponse();
     Cliente cliente = new Cliente();
@@ -38,13 +42,15 @@ public class ClientesService : IClientesService
     string P_CLI_NOT_MAILS;
     string P_LISTA_PNAV = "";
     int P_NAVIDAD = 0;
-    public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService)
+    string P_DIAS_PERMITIDOS = "";
+    public ClientesService(ApplicationDbContext context, IEmailService emailService, IAgenteService agenteService, ILogger<DevolucionesService> logger)
     {
         _context = context;
         P_CLI_NOT_MAILS = string.Empty;
         _emailService = emailService;
         GetParametros();
         _agenteService = agenteService;
+        _logger = logger;
     }
 
     public void GetParametros()
@@ -59,6 +65,7 @@ public class ClientesService : IClientesService
         P_CLI_NOT_MAILS = parametros.First(p => p.CODIGO == 19)?.VALOR ?? "";
         P_LISTA_PNAV = parametros.First(p => p.CODIGO == 61)?.VALOR ?? "";
         P_NAVIDAD = Convert.ToInt32(parametros.FirstOrDefault(p => p.CODIGO == 60)?.VALOR ?? "0");
+        P_DIAS_PERMITIDOS = parametros.First(p => p.CODIGO == 70)?.VALOR ?? "";
     }
 
 
@@ -72,33 +79,29 @@ public class ClientesService : IClientesService
         // Obtiene el nombre del día de la semana en español
         string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
         //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
-        var diasPermitidos = new[] { "DOMINGO" };
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                        .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(d => d.Trim().ToUpper()) 
+                        .ToList();
         string dayformateado = dayName.ToUpper();
         dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
         var response = new ServiceResponse<object>();
 
-
-
-
-        var preciosPermitidosNav = new HashSet<decimal>();
-        if (!string.IsNullOrEmpty(P_LISTA_PNAV))
-        {
-            preciosPermitidosNav = P_LISTA_PNAV.Split(';')
-                                               .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
-                                               .Where(d => d.HasValue)
-                                               .Select(d => d.Value)
-                                               .ToHashSet();
-        }
-
-
-
         try
         {
+            var preciosPermitidosNav = new HashSet<decimal>();
+            if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+            {
+                preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+            }
 
             var query = from cl in _context.CLIENTE
                         join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
                         join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
-                        // LEFT JOIN con CLIENTE_DIA para evitar duplicados
                         join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
                         from cd in cd_group.DefaultIfEmpty()
                         let deuda = _context.F_CXC_SALDO_CARTERA_PED_ST_NR(cl.CLI_EMPRESA, cl.CLI_CODIGO)
@@ -124,7 +127,7 @@ public class ClientesService : IClientesService
                             ce.CLI_LATITUD_NR, ce.CLI_LONGITUD_NR, ce.CLI_LATITUD1_NR, ce.CLI_LONGITUD1_NR, deuda } into g
                         select new ClienteDto
                         {
-                            // Tomamos los datos de la clave de agrupación (g.Key)
+                            
                             CLI_EMPRESA = p_empresa, // O desde donde corresponda
                             CLI_CODIGO = g.Key.CLI_CODIGO,
                             CLI_NOMBRE = g.Key.CLI_NOMBRE,
@@ -133,7 +136,7 @@ public class ClientesService : IClientesService
                             CLI_LISTAPRE = g.Key.CLI_LISTAPRE ?? 0,
                             CLI_ILIMITADOF = g.Key.CLI_ILIMITADO ?? 0,
                             CLI_ZONA = g.Key.CLI_ZONA ?? 0,
-                            // Si es un día permitido, se asigna ese día. Si no, se busca si el cliente tiene visita ese día.
+                            
                             CDI_DIA = diasPermitidos.Contains(dayformateado) ? dayformateado : (g.FirstOrDefault(x => x.cd != null && x.cd.CDI_DIA == dayformateado) != null ? dayformateado : null),
                             CLI_TELEFONO1 = g.Key.CLI_TELEFONO1,
                             CLI_POLITICAS = g.Key.CLI_POLITICAS,
@@ -175,12 +178,7 @@ public class ClientesService : IClientesService
             }
             else
             {
-                //foreach (var cliente in clientes)
-                //{
-                //    cliente.DEUDA = await ObtenerDeudaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO);
-                //    cliente.DISPONIBLE = (cliente.CUPO ?? 0) - (cliente.DEUDA);
-                //    cliente.FECHA_SUG = await ObtenerFechaSugeridaAsync(cliente.CLI_EMPRESA, cliente.CLI_CODIGO, cliente.CLI_AGENTE ?? 0);
-                //}
+                
 
                 response.Data = clientes;
                 response.Success = true;
@@ -191,12 +189,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesxAgente() " + ex.ToString());
         }
         catch (Exception ex)
         {
             // Log the exception details (ex) here as needed
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesxAgente() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -334,6 +334,7 @@ public class ClientesService : IClientesService
             }
             catch (Exception ex)
             {
+                _logger.LogError(" --------------------- ERROR ------------------ CreateClienteAsync() " + ex.ToString());
                 response.Message += "NO SE PUDO CREAR EL CLIENTE " + ex.Message;
                 response.Data = null;
                 response.Success = true;
@@ -427,12 +428,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCodigo() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCodigo() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -561,38 +564,55 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ EditClienteAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes. " + ex;
-
+            _logger.LogError(" --------------------- ERROR ------------------ EditClienteAsync() " + ex.ToString());
         }
 
         return response;
     }
     public async Task<decimal> ObtenerDeudaAsync(int empresa, decimal clienteCodigo)
     {
-        var result = await _context.SaldoCarteraResults
-             .FromSqlRaw("SELECT F_CXC_SALDO_CARTERA_PED_ST_NR(:empresa, :clienteCodigo) AS DEUDA FROM DUAL",
-                         new OracleParameter("empresa", empresa),
-                         new OracleParameter("clienteCodigo", clienteCodigo))
-             .ToListAsync();
+        try
+        {
+            var result = await _context.SaldoCarteraResults
+                 .FromSqlRaw("SELECT F_CXC_SALDO_CARTERA_PED_ST_NR(:empresa, :clienteCodigo) AS DEUDA FROM DUAL",
+                             new OracleParameter("empresa", empresa),
+                             new OracleParameter("clienteCodigo", clienteCodigo))
+                 .ToListAsync();
 
-        return result.FirstOrDefault()?.DEUDA ?? 0;
+            return result.FirstOrDefault()?.DEUDA ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ ObtenerDeudaAsync() " + ex.ToString());
+            return 0;
+        }
     }
 
     public async Task<DateTime> ObtenerFechaSugeridaAsync(int empresa, decimal clienteCodigo, decimal agente)
     {
-        var result = await _context.FechaSugResults
-             .FromSqlRaw("SELECT F_VNT_FECHA_FACTURAR_DT(:empresa, :clienteCodigo, :cliAgente) AS FECHA_SUG FROM DUAL",
-                         new OracleParameter("empresa", empresa),
-                         new OracleParameter("clienteCodigo", clienteCodigo),
-                         new OracleParameter("cliAgente", agente))
-             .ToListAsync();
+        try
+        {
+            var result = await _context.FechaSugResults
+                 .FromSqlRaw("SELECT F_VNT_FECHA_FACTURAR_DT(:empresa, :clienteCodigo, :cliAgente) AS FECHA_SUG FROM DUAL",
+                             new OracleParameter("empresa", empresa),
+                             new OracleParameter("clienteCodigo", clienteCodigo),
+                             new OracleParameter("cliAgente", agente))
+                 .ToListAsync();
 
-        return result.FirstOrDefault()?.FECHA_SUG ?? DateTime.Now;
+            return result.FirstOrDefault()?.FECHA_SUG ?? DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ ObtenerFechaSugeridaAsync() " + ex.ToString());
+            return DateTime.Now;
+        }
     }
 
 
@@ -644,7 +664,7 @@ public class ClientesService : IClientesService
         }
         catch (Exception ex)
         {
-
+            _logger.LogError(" --------------------- ERROR ------------------ UpdateRuteroxClienteAsync() " + ex.ToString());
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes. " + ex;
             response.Data = null;
@@ -727,12 +747,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCedRucAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientexCedRucAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -792,12 +814,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClientexCedRucAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClientexCedRucAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -861,12 +885,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClienteNuevoxCedRucAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ ValidaClienteNuevoxCedRucAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -910,12 +936,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesDespachosAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesDespachosAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -964,12 +992,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetPedidosDesxClienteAsync() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetPedidosDesxClienteAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -1016,8 +1046,9 @@ public class ClientesService : IClientesService
                                       TIPO_IDENTIFICACION = cn.TIPO_IDENTIFICACION,
                                       CREA_FECHA = cn.CREA_FECHA,
                                   })
-                 .OrderByDescending(x => x.CREA_FECHA)
+                
                  .Distinct()
+                  .OrderByDescending(x => x.CREA_FECHA)
                  .ToListAsync();
 
             if (clientes == null)
@@ -1036,12 +1067,14 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR NotFoundException ------------------ GetClientesNuevos() " + ex.ToString());
         }
         catch (Exception ex)
         {
 
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNuevos() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 
@@ -1059,7 +1092,8 @@ public class ClientesService : IClientesService
                                   select new AuxGeneral
                                   {
                                       AuxInt = cl.CLI_BLOQUEO,
-                                      AuxDecimal = cl.CLI_CODIGO
+                                      AuxDecimal = cl.CLI_CODIGO, 
+                                      AGE_CODIGO = cl.CLI_CUPO ///// se reutriliza objeto
                                   }).ToListAsync();
             var cliente = clientes.FirstOrDefault();
 
@@ -1098,6 +1132,7 @@ public class ClientesService : IClientesService
             response.Message = "Ocurrió un error al obtener los cliente." + ex.ToString(); ;
             response.Data = null;
             response.Status = 0;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClienteBloqueoAsync() " + ex.ToString());
             return response;
         }
 
@@ -1109,34 +1144,28 @@ public class ClientesService : IClientesService
     public async Task<ServiceResponse<object>> GetClientesNavidadxAgente(decimal agente)
     {
         GetParametros();
-        if (P_NAVIDAD == 0)
-        {             
-            var responseNoNav = new ServiceResponse<object>();
-            responseNoNav.Data = null;
-            responseNoNav.Success = true;
-            responseNoNav.Message = "No está activada la opción de Navidad.";
-            return responseNoNav;
-        }
-
         var response = new ServiceResponse<object>();
 
-
-
-
         var preciosPermitidosNav = new HashSet<decimal>();
-        if (!string.IsNullOrEmpty(P_LISTA_PNAV))
-        {
-            preciosPermitidosNav = P_LISTA_PNAV.Split(';')
-                                               .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
-                                               .Where(d => d.HasValue)
-                                               .Select(d => d.Value)
-                                               .ToHashSet();
-        }
-
-
-
+       
         try
         {
+            if (P_NAVIDAD == 0)
+            {
+                var responseNoNav = new ServiceResponse<object>();
+                responseNoNav.Data = null;
+                responseNoNav.Success = true;
+                responseNoNav.Message = "No está activada la opción de Navidad.";
+                return responseNoNav;
+            }
+            if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+            {
+                preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+            }
 
             var query = from cl in _context.CLIENTE
                         join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
@@ -1226,12 +1255,367 @@ public class ClientesService : IClientesService
         {
             response.Success = false;
             response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNavidadxAgente() " + ex.ToString());
         }
         catch (Exception ex)
         {
             // Log the exception details (ex) here as needed
             response.Success = false;
             response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesNavidadxAgente() " + ex.ToString());
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+
+        return response;
+    }
+
+
+
+    public async Task<List<decimal>> GetCodsClientesDiaxAgente(decimal agente)
+    {
+        System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
+
+        // Crea un objeto CultureInfo en español
+        CultureInfo ci = new CultureInfo("es-ES");
+
+        // Obtiene el nombre del día de la semana en español
+        string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+        //var diasPermitidos = new[] { "VIERNES", "DOMINGO" };
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(d => d.Trim().ToUpper())
+                            .ToList();
+        string dayformateado = dayName.ToUpper();
+        dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
+        var response = new List<decimal>();
+        try
+        {
+            var query = await (from cl in _context.CLIENTE
+                        //join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                        //join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                        // LEFT JOIN con CLIENTE_DIA para evitar duplicados
+                        join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
+                        from cd in cd_group.DefaultIfEmpty()
+                        
+                        where cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_TIPO == p_cli_Tipo
+                              && cl.CLI_INACTIVO == p_cli_Inactivo
+
+                              //&& cl.CLI_BLOQUEO == p_cli_Bloqueo
+                              && cl.CLI_AGENTE == agente
+                              && (
+                                  diasPermitidos.Contains(dayformateado)
+                                  || cd.CDI_DIA == dayformateado
+                              )
+
+                            //&& (preciosPermitidosNav.Count == 0 || !preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
+                        // Agrupamos por cliente para obtener resultados únicos
+                        group new { cl,  cd } by new
+                        {
+                            cl.CLI_CODIGO,
+                           
+                        } into g
+                        select new 
+                        {
+                           
+                      
+                            CLI_CODIGO = g.Key.CLI_CODIGO,
+                            
+                        }).Select(x => x.CLI_CODIGO) 
+
+                .ToListAsync();
+
+
+
+
+            if (query == null || !query.Any())
+            {
+                response = new List<decimal>();
+
+            }
+            else
+            {
+                
+                response = query;
+                
+            }
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogError(" --------------------- ERROR ------------------ GetCodsClientesDiaxAgente() " + ex.ToString());
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+        catch (Exception ex)
+        {
+
+            _logger.LogError(" --------------------- ERROR ------------------ GetCodsClientesDiaxAgente() " + ex.ToString());
+            throw new DatabaseException("Error de base de datos.", ex);
+        }
+        return response;
+    }
+
+
+
+    public async Task<ServiceResponse<List<ClienteMetadataDto>>> GetClientesMetadataxAgente(decimal agente)
+    {
+        System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
+        CultureInfo ci = new CultureInfo("es-ES");
+        string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                        .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(d => d.Trim().ToUpper())
+                        .ToList();
+        string dayformateado = FormatosTexto.RemoveDiacritics(dayName.ToUpper());
+
+        var response = new ServiceResponse<List<ClienteMetadataDto>>();
+
+        try
+        {
+            var preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+
+
+            var query = from cl in _context.CLIENTE
+                            // Join con POLITICA
+                        join p in _context.POLITICA
+                            on new { PoliticaCodigo = cl.CLI_POLITICAS, EmpresaCodigo = cl.CLI_EMPRESA }
+                            equals new { PoliticaCodigo = (long?)p.POL_CODIGO, EmpresaCodigo = p.POL_EMPRESA }
+                        join ce in _context.CLIENTE_EXT
+                            on new { ClienteCodigo = cl.CLI_CODIGO, EmpresaCodigo = cl.CLI_EMPRESA }
+                            equals new { ClienteCodigo = (decimal)ce.CLI_CODIGO, EmpresaCodigo = ce.CLI_EMPRESA }
+                        join cd_join in _context.CLIENTE_DIA
+                            on new { ClienteCodigo = cl.CLI_CODIGO, EmpresaCodigo = cl.CLI_EMPRESA }
+                            equals new { ClienteCodigo = (decimal)cd_join.CDI_CLIENTE, EmpresaCodigo = cd_join.CDI_EMPRESA }
+                            into cd_group
+                        from cd in cd_group.DefaultIfEmpty()
+
+                        where cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_AGENTE == agente
+                              && cl.CLI_TIPO == p_cli_Tipo
+                              && cl.CLI_INACTIVO == p_cli_Inactivo
+                              && (diasPermitidos.Contains(dayformateado) || (cd != null && cd.CDI_DIA == dayformateado))
+                              && (preciosPermitidosNav.Count == 0 || !preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
+
+                        group cl by new { cl.CLI_CODIGO, cl.CLI_CUPO, cl.CLI_BLOQUEO, cl.CLI_AGENTE } into g
+                        select new
+                        {
+                            CLI_CODIGO = g.Key.CLI_CODIGO,
+                            Cupo = g.Key.CLI_CUPO,
+                            Bloqueo = g.Key.CLI_BLOQUEO,
+                            CLI_AGENTE = g.Key.CLI_AGENTE
+                        };
+
+            var clientesRaw = await query.ToListAsync();
+
+            if (clientesRaw == null || !clientesRaw.Any())
+            {
+                response.Data = new List<ClienteMetadataDto>();
+                response.Success = true;
+                response.Message = FormatosTexto.DatosNoEncontrados;
+            }
+            else
+            {
+                var metadataList = new List<ClienteMetadataDto>();
+                using (var sha256 = SHA256.Create())
+                {
+                    foreach (var cliente in clientesRaw)
+                    {
+                        string stringToHash = $"{cliente.Bloqueo?.ToString() ?? "0"}|{cliente.Cupo?.ToString("F2", CultureInfo.InvariantCulture) ?? "0.00"}";
+                        byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
+                        var sb = new StringBuilder();
+                        for (int i = 0; i < bytes.Length; i++)
+                        {
+                            sb.Append(bytes[i].ToString("x2"));
+                        }
+                        string hash = sb.ToString();
+
+                        metadataList.Add(new ClienteMetadataDto
+                        {
+                            CLI_CODIGO = cliente.CLI_CODIGO, 
+                            CLI_AGENTE = cliente.CLI_AGENTE ?? 0,
+                            Hash = hash
+                        });
+                    }
+                }
+
+                response.Data = metadataList.OrderBy(x => x.CLI_CODIGO).ToList();
+                response.Success = true;
+                response.Message = "Metadatos de clientes generados exitosamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = "Ocurrió un error al generar los metadatos de los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesMetadataxAgente() " + ex.ToString());
+        }
+
+        return response;
+    }
+
+
+
+
+    public async Task<ServiceResponse<List<ClienteDto>>> GetClientesxCodigoAsync(AuxGeneral auxclientes)
+    {
+        System.DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
+        CultureInfo ci = new CultureInfo("es-ES");
+
+        string dayName = ci.DateTimeFormat.GetDayName(dayOfWeek);
+        var diasPermitidos = P_DIAS_PERMITIDOS
+                        .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(d => d.Trim().ToUpper())
+                        .ToList();
+        string dayformateado = dayName.ToUpper();
+        dayformateado = FormatosTexto.RemoveDiacritics(dayformateado);
+        var response = new ServiceResponse<List<ClienteDto>>();
+
+        try
+        {
+            if (auxclientes.ListaDecimal == null || !auxclientes.ListaDecimal.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = "No se proporcionaron códigos de cliente.";
+                return response;
+            }
+
+            var preciosPermitidosNav = new HashSet<decimal>();
+            if (!string.IsNullOrEmpty(P_LISTA_PNAV))
+            {
+                preciosPermitidosNav = P_LISTA_PNAV.Split(';')
+                                                   .Select(s => decimal.TryParse(s.Trim(), out var dec) ? dec : (decimal?)null)
+                                                   .Where(d => d.HasValue)
+                                                   .Select(d => d.Value)
+                                                   .ToHashSet();
+            }
+
+            var query = from cl in _context.CLIENTE
+                        join p in _context.POLITICA on cl.CLI_POLITICAS equals p.POL_CODIGO
+                        join ce in _context.CLIENTE_EXT on cl.CLI_CODIGO equals ce.CLI_CODIGO
+                        join cd_join in _context.CLIENTE_DIA on cl.CLI_CODIGO equals cd_join.CDI_CLIENTE into cd_group
+                        from cd in cd_group.DefaultIfEmpty()
+                        let deuda = _context.F_CXC_SALDO_CARTERA_PED_ST_NR(cl.CLI_EMPRESA, cl.CLI_CODIGO)
+                        where cl.CLI_EMPRESA == p_empresa
+                              && cl.CLI_TIPO == p_cli_Tipo
+                              && cl.CLI_INACTIVO == p_cli_Inactivo
+                              && auxclientes.ListaDecimal.Contains(cl.CLI_CODIGO)
+                              && (
+                                  diasPermitidos.Contains(dayformateado)
+                                  || cd.CDI_DIA == dayformateado
+                              )
+
+                            && (preciosPermitidosNav.Count == 0 || !preciosPermitidosNav.Contains(cl.CLI_LISTAPRE ?? -1))
+                        group new { cl, p, ce, cd } by new
+                        {
+                            cl.CLI_CODIGO,
+                            cl.CLI_NOMBRE,
+                            cl.CLI_AGENTE,
+                            cl.CLI_ID,
+                            cl.CLI_LISTAPRE,
+                            cl.CLI_ILIMITADO,
+                            cl.CLI_ZONA,
+                            cl.CLI_TELEFONO1,
+                            cl.CLI_POLITICAS,
+                            cl.CLI_DIRECCION,
+                            cl.CLI_DIR_ENTREGA,
+                            cl.CLI_NOMBRECOM,
+                            cl.CLI_MAIL,
+                            cl.CLI_RUC_CEDULA,
+                            ce.ID_PROVINCIA_FK,
+                            ce.ID_CANTON_FK,
+                            cl.CLI_ESTABLECIMIENTO,
+                            p.POL_PORC_DESC,
+                            p.POL_PORC_FINANC,
+                            p.POL_PORC_PRO_PAGO,
+                            p.POL_PORC_PAG_CONTA,
+                            p.POL_LINEA_CREDITO,
+                            p.POL_DIAS_PLAZO,
+                            p.POL_NRO_PAGOS,
+                            cl.CLI_PARROQUIA,
+                            cl.CLI_CUPO,
+                            cl.CLI_BLOQUEO,
+                            ce.CLI_LATITUD_NR,
+                            ce.CLI_LONGITUD_NR,
+                            ce.CLI_LATITUD1_NR,
+                            ce.CLI_LONGITUD1_NR,
+                            deuda
+                        } into g
+                        select new ClienteDto
+                        {
+
+                            CLI_EMPRESA = p_empresa, // O desde donde corresponda
+                            CLI_CODIGO = g.Key.CLI_CODIGO,
+                            CLI_NOMBRE = g.Key.CLI_NOMBRE,
+                            CLI_AGENTE = g.Key.CLI_AGENTE,
+                            CLI_ID = g.Key.CLI_ID,
+                            CLI_LISTAPRE = g.Key.CLI_LISTAPRE ?? 0,
+                            CLI_ILIMITADOF = g.Key.CLI_ILIMITADO ?? 0,
+                            CLI_ZONA = g.Key.CLI_ZONA ?? 0,
+
+                            CDI_DIA = diasPermitidos.Contains(dayformateado) ? dayformateado : (g.FirstOrDefault(x => x.cd != null && x.cd.CDI_DIA == dayformateado) != null ? dayformateado : null),
+                            CLI_TELEFONO1 = g.Key.CLI_TELEFONO1,
+                            CLI_POLITICAS = g.Key.CLI_POLITICAS,
+                            CLI_DIRECCION = g.Key.CLI_DIRECCION,
+                            CLI_DIR_ENTREGA = g.Key.CLI_DIR_ENTREGA,
+                            CLI_NOMBRECOM = g.Key.CLI_NOMBRECOM,
+                            CLI_MAIL = g.Key.CLI_MAIL,
+                            CLI_RUC_CEDULA = g.Key.CLI_RUC_CEDULA,
+                            ID_PROVINCIA_FK = g.Key.ID_PROVINCIA_FK ?? 0,
+                            ID_CANTON_FK = g.Key.ID_CANTON_FK ?? 0,
+                            CLI_ESTABLECIMIENTO = g.Key.CLI_ESTABLECIMIENTO,
+                            POL_PORC_DESC = g.Key.POL_PORC_DESC,
+                            POL_PORC_FINANC = g.Key.POL_PORC_FINANC,
+                            POL_PORC_PRO_PAGO = g.Key.POL_PORC_PRO_PAGO,
+                            POL_PORC_PAG_CONTA = g.Key.POL_PORC_PAG_CONTA,
+                            POL_LINEA_CREDITO = g.Key.POL_LINEA_CREDITO,
+                            POL_DIAS_PLAZO = g.Key.POL_DIAS_PLAZO,
+                            POL_NRO_PAGOS = g.Key.POL_NRO_PAGOS,
+                            CLI_PARROQUIA = g.Key.CLI_PARROQUIA,
+                            CUPO = g.Key.CLI_CUPO,
+                            CLI_BLOQUEO = g.Key.CLI_BLOQUEO ?? 0,
+                            CLI_LATITUD_NR = g.Key.CLI_LATITUD_NR ?? 0M,
+                            CLI_LONGITUD_NR = g.Key.CLI_LONGITUD_NR ?? 0M,
+                            CLI_LATITUD1_NR = g.Key.CLI_LATITUD1_NR ?? 0M,
+                            CLI_LONGITUD1_NR = g.Key.CLI_LONGITUD1_NR ?? 0M,
+                            DEUDA = g.Key.deuda,
+                            FECHA_SUG = _context.F_VNT_FECHA_FACTURAR_DT(1, g.Key.CLI_CODIGO, g.Key.CLI_AGENTE ?? 0),
+                            DISPONIBLE = (g.Key.CLI_CUPO ?? 0) - g.Key.deuda
+                        };
+
+            var clientes = await query.OrderBy(x => x.CLI_NOMBRE).ToListAsync();
+
+
+            if (clientes == null || !clientes.Any())
+            {
+                response.Data = null;
+                response.Success = true;
+                response.Message = FormatosTexto.DatosNoEncontrados;
+            }
+            else
+            {
+
+
+                response.Data = clientes;
+                response.Success = true;
+                response.Message = "Clientes encontrados exitosamente.";
+            }
+        }
+        catch (NotFoundException ex)
+        {
+            response.Success = false;
+            response.Message = ex.Message;
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesxCodigoAsync() " + ex.ToString());
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details (ex) here as needed
+            response.Success = false;
+            response.Message = "Ocurrió un error al obtener los clientes.";
+            _logger.LogError(" --------------------- ERROR ------------------ GetClientesxCodigoAsync() " + ex.ToString());
             throw new DatabaseException("Error de base de datos.", ex);
         }
 

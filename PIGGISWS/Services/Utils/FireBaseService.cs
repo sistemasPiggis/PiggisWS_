@@ -26,11 +26,15 @@ public class FireBaseService
 
     public FireBaseService(IConfiguration configuration, ApplicationDbContext context, ILogger<FireBaseService> logger)
     {
+
+     
         _context = context;
         _logger = logger;
         var firebaseUrl = configuration["Firebase:DatabaseUrl"];
         var serviceAccountKeyPath = configuration["Firebase:ServiceAccountKeyPath"];
 
+
+      
         GoogleCredential credential;
         using (var stream = new FileStream(serviceAccountKeyPath, FileMode.Open, FileAccess.Read))
         {
@@ -55,16 +59,16 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
         try
         {
             var incluidos = new List<decimal> { 90000553, 190001639,
-103,
-104,
-95,
-102,
-101
- }; 
+                    103,
+                    104,
+                    95,
+                    102,
+                    101
+                     }; 
 
 
             var hoy = DateTime.Today.AddDays(0);
-            var oneWeekAgo = DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeMilliseconds();
+            //var oneWeekAgo = DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeMilliseconds();
             //var marcaciones = (await _firebaseClient
             //            .Child("marcaciones")
             //            .OrderBy("Fecha")
@@ -88,7 +92,7 @@ public async Task<List<Marcacion>> GetMarcacionesAsync()
             var marcaciones = (await _firebaseClient
                        .Child("marcaciones")
                        .OrderBy("Fecha")
-                       .LimitToLast(900000)
+                       .LimitToLast(900)
                        .OnceAsync<Marcacion>())
                        .Select(item => new Marcacion
                        {

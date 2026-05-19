@@ -226,4 +226,38 @@ public class ClienteController : ControllerBase
 
         return BadRequest(response.Message);
     }
+
+
+
+
+    [Authorize]
+    [HttpPost("GetClientesMetadataxAgente")]
+    public async Task<IActionResult> GetClientesMetadataxAgente([FromBody] decimal agente)
+    {
+        var response = await _clientesService.GetClientesMetadataxAgente(agente);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
+    [Authorize]
+    [HttpPost("GetClientesxCodigoAsync")]
+    public async Task<IActionResult> GetClientesxCodigoAsync([FromBody] AuxGeneral auxClientes)
+    {
+        var response = await _clientesService.GetClientesxCodigoAsync(auxClientes);
+
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
 }

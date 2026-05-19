@@ -2,7 +2,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph.CallRecords;
-using PIGGISWS.Controllers;
 using PIGGISWS.Models;
 using PIGGISWS.Models.DTOs;
 using PIGGISWS.Models.Vistas;
@@ -76,6 +75,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rutero> RUTERO { get; set; }
     public DbSet<AgentePedidoCalendario> AGENTE_CALENDARIO_PEDIDO { get; set; }
     public DbSet<Cartera> CARTERA { get; set; }
+   
     public DbSet<DDocumento> DDOCUMENTO { get; set; }
 
     public DbSet<Total> TOTAL { get; set; }
@@ -91,9 +91,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<Lst_Productos_Apr_Ncc> LST_PRODUCTOS_APR_NCC { get; set; }
 
     public DbSet<Vl_Ncc_Idc_ldv> VL_NCC_IDC_LDV { get; set; }
-    public DbSet<Rep_Ventas_Int_60> REP_VENTAS_INT_60 { get; set; }
+    public DbSet<REP_VENTAS_INT_PARAM> REP_VENTAS_INT_PARAM { get; set; }
 
-    public DbSet<Rep_Motivos_Dev> REP_MOTIVOS_DEV { get; set; }
+    public DbSet<Rep_Motivos_Dev_App> REP_MOTIVOS_DEV_APP { get; set; }
+    public DbSet<Rep_Motivos_Dev_AppOld> REP_MOTIVOS_DEV_APPOLD { get; set; }
     public DbSet<Cmovinv> CMOVINV { get; set; }
     public DbSet<Pre_Ventas_Anual> PRE_VENTAS_ANUAL { get; set; }
     public DbSet<Tmp_Marcacion_Agente> TMP_MARCACION_AGENTE { get; set; }
@@ -103,6 +104,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Devolucion_Ext> DEVOLUCION_EXT { get; set; }
     public DbSet<Cc_Est_Perididos> CC_EST_PEDIDOS { get; set; }
     public DbSet<Vl_Cc_Est_Pedidosq> VL_CC_EST_PEDIDOSQ { get; set; }
+    public DbSet<Idv_No_Gestionados> IDV_NO_GESTIONADOS { get; set; }
     public DbSet<Rep_Lista_Prod_Ped_Internet> REP_LISTA_PROD_PED_INTERNET { get; set; }
     public DbSet<SaldoCarteraResult> SaldoCarteraResults { get; set; }
     public DbSet<FechaSugResult> FechaSugResults { get; set; }
@@ -110,7 +112,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rep_Cons_Cartera_Interneta> REP_CONS_CARTERA_INTERNETA { get; set; }
     public DbSet<REP_CANTIDADES_VENTAS_2009> REP_CANTIDADES_VENTAS_2009 { get; set; }
     public DbSet<REP_PEDIDOS_INT_X_DAPP> REP_PEDIDOS_INT_X_DAPP { get; set; }
-    public DbSet<Tmp_Dev_Pro_Cli_Age> TMP_DEV_PROD_CLI_AGE { get; set; }
+    public DbSet<TMP_DEV_PROD_CLI_AGE> TMP_DEV_PROD_CLI_AGE { get; set; }
     public DbSet<REP_DET_ESTADO_DESPACHO_PED> REP_DET_ESTADO_DESPACHO_PED { get; set; }
     public DbSet<REP_CART_VEN_INT_T> REP_CART_VEN_INT_T { get; set; }
 
@@ -121,6 +123,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<TDS_PEDIDO_NAV_DET> TDS_PEDIDO_NAV_DET { get; set; }
     public DbSet<TDS_PEDIDOS_NAV_CAB> TDS_PEDIDOS_NAV_CAB { get; set; }
 
+    public DbSet<CCOMFACI_EXT> CCOMFACI_EXT { get; set; }
+
+    public DbSet<CPARAMET> CPARAMET { get; set; }
+    public DbSet<DPARAMET> DPARAMET { get; set; }
+    public DbSet<VM_REPORTE_VENTAS2023> VM_REPORTE_VENTAS2023 { get; set; }
     public decimal F_CXC_SALDO_CARTERA_PED_ST_NR(int empresa, decimal clienteCodigo)
                => throw new NotSupportedException();
 
@@ -137,7 +144,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<TDS_PEDIDOS_NAV_CAB>()
            .HasKey(a => new { a.ID_PEDIDO_NAV });
 
-        modelBuilder.Entity<Tmp_Dev_Pro_Cli_Age>()
+        modelBuilder.Entity<TMP_DEV_PROD_CLI_AGE>()
            .HasKey(a => new { a.CODIGO_PK });
         modelBuilder.Entity<Clientes_Nuevos>()
             .HasKey(cn => new { cn.ID_SECUENCIA_PK });
@@ -181,9 +188,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Vl_Ncc_Idc_ldv>().ToTable("VL_NCC_IDC_LDV").HasKey(a => new { a.ID_EMPRESA_NR, a.TOTAL_NOTA_CREDITO, a.NUMERO_NOTA_CREDITO, a.NUMERO_IDC, a.NUMERO_FACTURA, a.NUMERO_LDV });
         modelBuilder.Entity<Lst_Productos_Apr_Ncc>().ToTable("LST_PRODUCTOS_APR_NCC").HasKey(a => new { a.CCO_EMPRESA, a.CCO_CODIGO, a.ID, a.VALOR });
 
-        modelBuilder.Entity<Rep_Ventas_Int_60>().ToTable("REP_VENTAS_INT_60").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO, a.UMD_ID });
-        modelBuilder.Entity<Rep_Motivos_Dev>().ToTable("REP_MOTIVOS_DEV").HasKey(a => new { a.TDE_CODIGO });
-
+        modelBuilder.Entity<REP_VENTAS_INT_PARAM>().ToTable("REP_VENTAS_INT_PARAM").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO, a.UMD_ID });
+        modelBuilder.Entity<Rep_Motivos_Dev_App>().ToTable("REP_MOTIVOS_DEV_APP").HasKey(a => new { a.TDE_CODIGO });
+        modelBuilder.Entity<Rep_Motivos_Dev_AppOld>().ToTable("REP_MOTIVOS_DEV_APPOLD").HasKey(a => new { a.TDE_CODIGO });
         modelBuilder.Entity<Cc_Est_Perididos>().ToTable("CC_EST_PEDIDOS").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });
         modelBuilder.Entity<Vl_Cc_Est_Pedidosq>().ToTable("VL_CC_EST_PEDIDOSQ").HasKey(a => new { a.PRO_CODIGO, a.CCO_CODCLIPRO });
         modelBuilder.Entity<Rep_Lista_Prod_Ped_Internet>().ToTable("REP_LISTA_PROD_PED_INTERNET").HasKey(a => new { a.PRO_CODIGO, a.DLP_LISTAPRE });
@@ -193,11 +200,12 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<REP_PEDIDOS_INT_X_DAPP>().ToTable("REP_PEDIDOS_INT_X_DAPP").HasKey(a => new { a.DOC, a.CCO_AGENTE, a.CANTIDAD_KILOS });
         modelBuilder.Entity<REP_DET_ESTADO_DESPACHO_PED>().ToTable("REP_DET_ESTADO_DESPACHO_PED").HasKey(a => new { a.FAC, a.ESTADO_DESPACHO, a.CLI_NOMBRE });
         modelBuilder.Entity<REP_CART_VEN_INT_T>().ToTable("REP_CART_VEN_INT_T").HasKey(a => new { a.DOC, a.AGE_CODIGO, a.CLI_CLAVE });
+        modelBuilder.Entity<Idv_No_Gestionados>().ToTable("IDV_NO_GESTIONADOS").HasKey(a => new { a.IDV, a.CLI_CODIGO, a.PRO_CODIGO });
         #endregion
 
-       
 
-    modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
+
+        modelBuilder.HasDbFunction(typeof(ApplicationDbContext)
                 .GetMethod(nameof(F_CXC_SALDO_CARTERA_PED_ST_NR), new[] { typeof(int), typeof(decimal) }))
                 .HasName("F_CXC_SALDO_CARTERA_PED_ST_NR");
 
@@ -219,6 +227,8 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Ccomfaci>()
             .HasKey(a => new { a.CFAC_CCO_COMPROBA, a.CFAC_EMPRESA });
 
+        modelBuilder.Entity<CCOMFACI_EXT>()
+           .HasKey(a => new { a.CFAI_CCO_COMPROBA, a.CFAI_EMPRESA });
 
         modelBuilder.Entity<UMedida>()
            .HasKey(a => new { a.UMD_CODIGO, a.UMD_EMPRESA });
@@ -340,6 +350,15 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<SaldoCarteraResult>().HasNoKey();
 
         modelBuilder.Entity<FechaSugResult>().HasNoKey();
+        modelBuilder.Entity<CPARAMET>()
+                   .HasKey(u => new { u.CPA_CODIGO, u.CPA_EMPRESA });
+
+        modelBuilder.Entity<DPARAMET>()
+                .HasKey(u => new { u.DPA_CPA_CODIGO, u.DPA_EMPRESA });
+
+        modelBuilder.Entity<VM_REPORTE_VENTAS2023>()
+               .HasKey(u => new { u.ANIOS, u.MESES, u.CCO_AGENTE });
+
     }
 
 
