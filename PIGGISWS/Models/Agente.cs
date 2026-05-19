@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Security.Policy;
 
 namespace PIGGISWS.Models;
@@ -30,7 +31,9 @@ public class Agente
 
     public decimal? AGE_REPORTA { get; set; }
     public string? AGE_MAIL { get; set; } = string.Empty;
-    public int? AGE_ALMACEN { get; set; } 
+    public int? AGE_ALMACEN { get; set; }
 
     //public string? AGE_TELEFONO { get; set; }
+    [NotMapped]
+    public string Grupo { get; set; }
 }

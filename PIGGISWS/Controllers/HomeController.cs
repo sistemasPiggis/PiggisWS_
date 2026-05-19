@@ -1,21 +1,25 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PIGGISWS.Models;
-using System.Diagnostics;
 using Microsoft.Graph;
 using Microsoft.Identity.Web;
+using PIGGISWS.Interfaces;
+using PIGGISWS.Models;
+using PIGGISWS.Services;
+using System.Diagnostics;
 
 namespace PIGGISWS.Controllers;
 [Authorize]
 public class HomeController : Controller
 {
+    private readonly IUserGroupService _userGroupService;
     private readonly GraphServiceClient _graphServiceClient;
     private readonly ILogger<HomeController> _logger;
 
-    public HomeController(ILogger<HomeController> logger, GraphServiceClient graphServiceClient)
+    public HomeController(ILogger<HomeController> logger, GraphServiceClient graphServiceClient, IUserGroupService userGroupService)
     {
         _logger = logger;
-            _graphServiceClient = graphServiceClient;;
+            _graphServiceClient = graphServiceClient;
+        _userGroupService = userGroupService;
     }
 
     [AuthorizeForScopes(ScopeKeySection = "MicrosoftGraph:Scopes")]

@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
@@ -57,21 +58,21 @@ public class AgenteController : ControllerBase
         response.Status = Response.StatusCode;
         return BadRequest(response);
     }
-    [Authorize]
-    [HttpPost("GetCodigoAgentexMailAsync")]
+    //[Authorize]
+    //[HttpPost("GetCodigoAgentexMailAsync")]
 
-    public async Task<IActionResult> GetCodigoAgentexMailAsync([FromBody] string request)
-    {
-        var response = await _agenteService.GetCodigoAgentexMailAsync(request);
+    //public async Task<IActionResult> GetCodigoAgentexMailAsync([FromBody] string request)
+    //{
+    //    var response = await _agenteService.GetCodigoAgentexMailAsync(request);
 
-        if (response.Success)
-        {
-            response.Status = Response.StatusCode;
-            return Ok(response);
-        }
+    //    if (response.Success)
+    //    {
+    //        response.Status = Response.StatusCode;
+    //        return Ok(response);
+    //    }
 
-        return BadRequest(response.Message);
-    }
+    //    return BadRequest(response.Message);
+    //}
 
 
 
@@ -88,6 +89,24 @@ public class AgenteController : ControllerBase
         };
         return Ok(response);
     }
-    
+
+
+
+    [Authorize]
+    [HttpPost("GetCodigoAgentexMailAsync")]
+
+    public async Task<IActionResult> GetCodigoAgentexMailAsync([FromBody] string mail)
+    {
+        var response = await _agenteService.GetCodigoAgentexMailAsync(mail);
+        if (response.Success)
+        {
+            response.Status = Response.StatusCode;
+            return Ok(response);
+        }
+
+        return BadRequest(response.Message);
+    }
+
+
 
 }

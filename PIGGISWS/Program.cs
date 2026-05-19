@@ -1,9 +1,12 @@
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using PIGGISWS.Data;
@@ -11,13 +14,10 @@ using PIGGISWS.Interfaces;
 using PIGGISWS.Services;
 using PIGGISWS.Services.Utils;
 using System.Configuration;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ?? builder.Configuration["MicrosoftGraph:Scopes"]?.Split(' ');
+var initialScopes = new[] { "https://graph.microsoft.com/.default" };
 
 ////// Add services to the container.
 //builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
@@ -30,9 +30,28 @@ var initialScopes = builder.Configuration["DownstreamApi:Scopes"]?.Split(' ') ??
 //AMBIENTE PRODUCCIÓN
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddMicrosoftIdentityWebApi(builder.Configuration);
+
 builder.Services.AddAuthorization();
 
-
+builder.Services.AddScoped<Microsoft.Graph.GraphServiceClient>(sp =>
+{
+    return new Microsoft.Graph.GraphServiceClient(
+        new Microsoft.Graph.DelegateAuthenticationProvider(async (request) =>
+        {
+            var tokenProvider = sp.GetRequiredService<Microsoft.Identity.Web.ITokenAcquisition>();
+            try
+            {
+                var token = await tokenProvider.GetAccessTokenForAppAsync("https://graph.microsoft.com");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            catch
+            {
+                // Si falla, intenta sin scope específico
+                var token = await tokenProvider.GetAccessTokenForAppAsync("https://graph.microsoft.com/.default");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }));
+});
 
 builder.Services.AddControllersWithViews(options =>
 {
@@ -57,6 +76,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.EnableSensitiveDataLogging());
 
+// Registrar servicios
+builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 builder.Services.AddScoped<IAgenteService, AgenteService>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();

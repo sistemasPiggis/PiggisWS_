@@ -3,7 +3,9 @@ using Microsoft.Graph;
 using PIGGISWS.Data;
 using PIGGISWS.Interfaces;
 using PIGGISWS.Models;
+using PIGGISWS.Models.DTOs;
 using System.Drawing;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PIGGISWS.Services;
 
@@ -14,11 +16,14 @@ public class AgenteService: IAgenteService
     ModelResponse model = new ModelResponse();
     Provincia provincia = new Provincia();
     List<Map_Cerca_Agente> lista_mapas = new List<Map_Cerca_Agente>();
-    private readonly ILogger<PedidoService> _logger;
-    public AgenteService(ApplicationDbContext context, ILogger<PedidoService> logger)
+    private readonly ILogger<AgenteService> _logger;
+    private readonly IUserGroupService _userGroupService;
+    public AgenteService(ApplicationDbContext context, ILogger<AgenteService> logger, 
+            IUserGroupService userGroupService)
     {
         _context = context;
         _logger = logger;
+        _userGroupService = userGroupService;
     }
 
 
@@ -157,19 +162,20 @@ public class AgenteService: IAgenteService
     }
 
 
-    public async Task<ServiceResponse<object>> GetCodigoAgentexMailAsync(string mail)
+    public async Task<ServiceResponse<Agente>> GetCodigoAgentexMailAsync(string mail)
     {
-        decimal codigo = 0;
-        var response = new ServiceResponse<object>();
+        int codigo = 0;
+        var response = new ServiceResponse<Agente>();
         string mailup = mail.ToUpper();
-        string Nombre = string.Empty;
+        string nombre = string.Empty;
+        string grupo = string.Empty;
         try
         {
             var agentes = await _context.AGENTE
                 .Where(a => a.AGE_MAIL.ToUpper() == mailup
             && a.AGE_INACTIVO == 0).ToListAsync();
             codigo = agentes.Select(c => c.AGE_CODIGO).FirstOrDefault();
-            Nombre = agentes.Select(c => c.AGE_NOMBRE).FirstOrDefault() ?? "AGENTE NO ESTÁ CORRECTAMENTE CONFIGURADO";
+            nombre = agentes.Select(c => c.AGE_NOMBRE).FirstOrDefault() ?? "AGENTE NO ESTÁ CORRECTAMENTE CONFIGURADO";
             if (codigo == 0)
             {
                 response.Data = null;
@@ -178,17 +184,42 @@ public class AgenteService: IAgenteService
                 return response;
             }
 
-            response.Data = codigo;
+            // 2. Obtener grupo del usuario desde AD
+            try
+            {
+                grupo = await _userGroupService.GetUserRoleAsync(mail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error obteniendo grupo de AD para {mail}: {ex.Message}");
+                grupo = "SIN_ASIGNAR";
+            }
+
+
+            // 3. Retornar datos completos
+            response.Data = new Agente
+            {
+                AGE_CODIGO = codigo,
+                AGE_NOMBRE = nombre,
+                Grupo = grupo
+            };
             response.Success = true;
-            response.Message = "BIENVENIDO EXISTOS!!! AGENTE:" + " " + Nombre;
+            response.Message = $"BIENVENIDO EXITOSO!!! AGENTE: {nombre} - GRUPO: {grupo}";
             return response;
         }
         catch (NotFoundException ex)
         {
 
             response.Success = false;
-            response.Message = "Ocurrió un error al obtener los pedidos " + ex.ToString();
+            response.Message = "Ocurrió un error al obtener el agente " + ex.ToString();
             _logger.LogError(" --------------------- ERROR ------------------ GetCodigoAgentexMailAsync() " + ex.ToString() + mail);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Message = "Error al procesar la solicitud";
+            _logger.LogError($"ERROR GetCodigoAgentexMailAsync() {ex} - Mail: {mail}");
             return response;
         }
 
