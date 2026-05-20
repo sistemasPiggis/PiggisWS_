@@ -22,6 +22,7 @@ public class UserGroupService : IUserGroupService
 
         try
         {
+            // TRAE LOS GRUPOS A LOS QUE PERTENECE EL USUARIO
             var memberOf = await _graphServiceClient.Users[userId].MemberOf.Request().GetAsync();
 
             if (memberOf != null)
